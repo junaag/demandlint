@@ -3,6 +3,7 @@ import { analyzeParsedTable, validateMapping } from "./application/analyzeParsed
 import { readBrowserFile } from "./adapters/browser/readBrowserFile";
 import { parseTableFile } from "./adapters/table/parseTableFile";
 import type { ParsedTable } from "./adapters/table/domain";
+import { DataHealthReview } from "./components/DataHealthReview";
 import type { CanonicalField, ColumnMapping, ProcessedDataset } from "./core/domain";
 import type { MappingPlan, MappingConfidence, MappingDecision } from "./core/mapping/domain";
 import { suggestColumnMapping } from "./core/mapping/suggestColumnMapping";
@@ -155,8 +156,8 @@ export default function App() {
 
         <nav className="steps" aria-label="Import workflow">
           <div className={`step ${table ? "complete" : "active"}`}><span>1</span>Upload</div>
-          <div className={`step ${table ? "active" : ""}`}><span>2</span>Map fields</div>
-          <div className={`step ${result ? "active" : ""}`}><span>3</span>Analyze</div>
+          <div className={`step ${table && !result ? "active" : result ? "complete" : ""}`}><span>2</span>Map fields</div>
+          <div className={`step ${result ? "active" : ""}`}><span>3</span>Review & export</div>
         </nav>
 
         {error && <div className="alert error-alert" role="alert">{error}</div>}
@@ -288,28 +289,13 @@ export default function App() {
               </button>
             </section>
 
-            {result && (
-              <section className="panel result-panel" aria-live="polite">
-                <div>
-                  <p className="section-label">ANALYSIS COMPLETE</p>
-                  <h2>Your file has passed through the DemandLint core.</h2>
-                  <p>Detailed issue review and export arrive in V0.0.5.</p>
-                </div>
-                <div className="result-grid">
-                  <div><strong>{result.stats.totalRows}</strong><span>Rows checked</span></div>
-                  <div><strong>{result.stats.readyRows}</strong><span>Ready</span></div>
-                  <div><strong>{result.stats.reviewRows}</strong><span>Review</span></div>
-                  <div><strong>{result.stats.blockedRows}</strong><span>Blocked</span></div>
-                  <div><strong>{result.stats.duplicateRows}</strong><span>Duplicates</span></div>
-                </div>
-              </section>
-            )}
+            {result && <DataHealthReview result={result} />}
           </>
         )}
       </main>
 
       <footer>
-        DemandLint V0.0.4 · Local-first by design · EN / FR / ES / PT column recognition
+        DemandLint V0.0.5 · Local-first by design · EN / FR / ES / PT column recognition
       </footer>
     </div>
   );
