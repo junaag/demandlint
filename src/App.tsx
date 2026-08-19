@@ -176,7 +176,7 @@ export default function App() {
             >
               <div className="upload-icon" aria-hidden="true">↑</div>
               <h2>{busy ? "Reading your file…" : "Drop your lead file here"}</h2>
-              <p>CSV or XLSX · processed entirely in this browser session</p>
+              <p>CSV or XLSX · your lead file stays on this device and is never uploaded or stored by DemandLint</p>
               <label className="button primary" htmlFor="lead-file-input">
                 {busy ? "Processing…" : "Choose file"}
               </label>
@@ -295,7 +295,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.0.5 · Local-first by design · EN / FR / ES / PT column recognition
+        DemandLint V0.1.0 · Local-first by design · EN / FR / ES / PT column recognition
       </footer>
     </div>
   );
