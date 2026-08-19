@@ -4,6 +4,17 @@
 
 Convert arbitrary source headers into explainable suggestions for DemandLint's canonical lead fields without requiring AI.
 
+## Language coverage
+
+The default deterministic dictionary covers common lead-export headers in:
+
+- English (EN)
+- French (FR)
+- Spanish (ES)
+- Portuguese (PT, with common Brazilian variants where useful)
+
+Language coverage applies to source column recognition; it does not imply full UI localization.
+
 ## Canonical fields
 
 - First Name
@@ -49,8 +60,14 @@ Examples:
 
 - `First Name` -> `firstName`
 - `Prénom` -> `firstName`
+- `Nombre` -> `firstName`
+- `Primeiro nome` -> `firstName`
 - `Organisation` -> `company`
+- `Empresa` -> `company`
+- `Nome da empresa` -> `company`
 - `Business Email` -> `email`
+- `Correo electrónico` -> `email`
+- `Email profissional` -> `email`
 
 A unique High match can be auto-selected.
 
@@ -112,7 +129,7 @@ Fuzzy similarity or AI assistance can be evaluated later only for headers that r
 
 ## Out of scope
 
-- UI
+- UI localization
 - persisted custom dictionaries
 - organization-specific recipes
 - value-based field inference
