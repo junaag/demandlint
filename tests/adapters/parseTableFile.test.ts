@@ -1,4 +1,4 @@
-import ExcelJS from "exceljs";
+import writeExcelFile from "write-excel-file/node";
 import { describe, expect, it } from "vitest";
 import { TableParseError } from "../../src/adapters/table/domain";
 import { parseTableFile } from "../../src/adapters/table/parseTableFile";
@@ -15,14 +15,17 @@ describe("table file dispatcher", () => {
   });
 
   it("routes XLSX files to the XLSX adapter", async () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Leads");
-    worksheet.addRow(["First Name", "Email"]);
-    worksheet.addRow(["Alice", "alice@example.com"]);
+    const buffer = await writeExcelFile(
+      [
+        ["First Name", "Email"],
+        ["Alice", "alice@example.com"],
+      ],
+      { sheet: "Leads" },
+    ).toBuffer();
 
     const result = await parseTableFile({
       name: "event.xlsx",
-      bytes: new Uint8Array(await workbook.xlsx.writeBuffer()),
+      bytes: new Uint8Array(buffer),
     });
 
     expect(result.metadata.sourceType).toBe("xlsx");
@@ -35,8 +38,14 @@ describe("table file dispatcher", () => {
         name: "event.xls",
         bytes: new Uint8Array([1, 2, 3]),
       }),
-    ).rejects.toMatchObject<TableParseError>({
+    ).rejects.toMatchObject({
       code: "UNSUPPORTED_FILE_TYPE",
     });
+  });
+
+  it("throws a DemandLint parsing error for unsupported formats", async () => {
+    await expect(
+      parseTableFile({ name: "event.txt", bytes: new Uint8Array([1]) }),
+    ).rejects.toBeInstanceOf(TableParseError);
   });
 });
