@@ -11,13 +11,17 @@ function escapeCsvValue(value: unknown): string {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
-export function serializeCsv(
+function cellValue(row: object, key: string): unknown {
+  return (row as Record<string, unknown>)[key];
+}
+
+export function serializeCsv<T extends object>(
   columns: readonly CsvColumn[],
-  rows: readonly Record<string, unknown>[],
+  rows: readonly T[],
 ): string {
   const header = columns.map((column) => escapeCsvValue(column.header ?? column.key)).join(",");
   const body = rows.map((row) =>
-    columns.map((column) => escapeCsvValue(row[column.key])).join(","),
+    columns.map((column) => escapeCsvValue(cellValue(row, column.key))).join(","),
   );
 
   return [header, ...body].join("\r\n");
