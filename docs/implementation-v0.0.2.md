@@ -20,7 +20,7 @@ Column detection/mapping is intentionally deferred to V0.0.3.
 ## Supported inputs
 
 - `.csv` — UTF-8 text, delimiter auto-detected by Papa Parse
-- `.xlsx` — first worksheet, parsed locally with ExcelJS
+- `.xlsx` — first worksheet, parsed locally with `read-excel-file`
 
 Legacy `.xls` is intentionally unsupported in the MVP.
 
@@ -56,8 +56,9 @@ This allows the future UI to display clear user-facing messages without parsing 
 1. Source headers are preserved. Normalization belongs to the mapping layer.
 2. CSV values are not dynamically typed; source text stays source text.
 3. XLSX uses the first non-empty row as headers and skips fully empty data rows.
-4. XLSX complex cell values are represented using their displayed text; primitive values and dates are preserved.
+4. XLSX primitive values and dates are preserved by the reader.
 5. Parsing libraries exist only under `src/adapters/`.
+6. The XLSX reader is browser-first and accepts `ArrayBuffer`, which matches the future local-file flow without server upload.
 
 ## Out of scope
 
