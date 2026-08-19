@@ -1,0 +1,13 @@
+First Name,Last Name,Email,Company,Job Title,Country
+Ada,Lovelace,ada@analytical.example,Analytical Engines,Founder,UK
+ Grace , Hopper , GRACE@NAVY.EXAMPLE , US Navy ,Rear Admiral,United States
+Katherine,Johnson,katherine@nasa.example,,Mathematician,USA
+Margaret,Hamilton,margaret@,NASA,Software Engineer,US
+Jean,Dupont,Jean@Example.com,Example,VP Marketing,France
+Jean,Dupont, jean@example.com ,Example France,VP Marketing,FR
+Marie,Curie,marie@gmail.com,Radium Institute,Director,France
+Alan,Turing,alan@bletchley.example,Bletchley Park,Researcher,United Kingdom
+N/A,N/A,nobody@example.com,Example Corp,Unknown,--
+Dorothy,Vaughan,dorothy@nasa.example,NASA,Manager,United States
+Mary,Jackson,mary@nasa.example,NASA,Engineer,United States
+,NoLastName,nolast@example.com,Example Corp,Manager,France
