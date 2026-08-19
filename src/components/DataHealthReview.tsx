@@ -12,6 +12,7 @@ import {
   type QualityStatus,
 } from "../application/qualityReview";
 import type { DataIssue, IssueType, ProcessedDataset } from "../core/domain";
+import "./DataHealthReview.css";
 
 interface DataHealthReviewProps {
   result: ProcessedDataset;
