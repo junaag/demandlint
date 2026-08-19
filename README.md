@@ -39,6 +39,12 @@ The first module focuses on **lead import quality**:
 
 ## Repository status
 
-The initial architecture and Clean Core are being prepared in a dedicated foundation branch.
+Completed foundations:
+
+- V0.0.1 — deterministic Clean Core, validation, normalization and deduplication
+- V0.0.2 — local CSV/XLSX ingestion adapters
+- V0.0.3 — deterministic column mapping engine (current release)
+
+Next planned step: build the first React upload and mapping wizard around the validated core.
 
 Product and architecture decisions live in `docs/`.
