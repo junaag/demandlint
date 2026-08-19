@@ -32,6 +32,66 @@ describe("deterministic column mapping", () => {
     expect(plan.unmappedCount).toBe(0);
   });
 
+  it("auto-maps common Spanish aliases", () => {
+    const plan = suggestColumnMapping([
+      "Nombre",
+      "Apellidos",
+      "Empresa",
+      "Correo electrónico",
+      "Cargo",
+      "Teléfono",
+      "País",
+      "Fuente del lead",
+      "Estado del miembro de campaña",
+    ]);
+
+    expect(plan.autoMapping).toEqual({
+      Nombre: "firstName",
+      Apellidos: "lastName",
+      Empresa: "company",
+      "Correo electrónico": "email",
+      Cargo: "jobTitle",
+      Teléfono: "phone",
+      País: "country",
+      "Fuente del lead": "leadSource",
+      "Estado del miembro de campaña": "campaignMemberStatus",
+    });
+    expect(plan.autoMappedCount).toBe(9);
+    expect(plan.reviewCount).toBe(0);
+    expect(plan.ambiguousCount).toBe(0);
+    expect(plan.unmappedCount).toBe(0);
+  });
+
+  it("auto-maps common Portuguese aliases", () => {
+    const plan = suggestColumnMapping([
+      "Primeiro nome",
+      "Apelido",
+      "Nome da empresa",
+      "Email profissional",
+      "Função",
+      "Telemóvel",
+      "País",
+      "Fonte do lead",
+      "Estado do membro da campanha",
+    ]);
+
+    expect(plan.autoMapping).toEqual({
+      "Primeiro nome": "firstName",
+      Apelido: "lastName",
+      "Nome da empresa": "company",
+      "Email profissional": "email",
+      Função: "jobTitle",
+      Telemóvel: "phone",
+      País: "country",
+      "Fonte do lead": "leadSource",
+      "Estado do membro da campanha": "campaignMemberStatus",
+    });
+    expect(plan.autoMappedCount).toBe(9);
+    expect(plan.reviewCount).toBe(0);
+    expect(plan.ambiguousCount).toBe(0);
+    expect(plan.unmappedCount).toBe(0);
+  });
+
   it("treats canonical labels as high confidence", () => {
     const candidates = candidatesForHeader("First Name");
 
