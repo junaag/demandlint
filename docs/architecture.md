@@ -1,20 +1,24 @@
-# DemandLint — Architecture V0.1
+# DemandLint — Architecture V0.1.1
 
 ## Architectural goal
 
-Keep the first product version simple, local-first and deterministic while protecting the business rules from UI/framework churn.
+Keep DemandLint's data-quality engine local-first, deterministic and framework-independent while allowing the product to grow into an authenticated multi-tenant SaaS with saved mappings, multi-source imports and CRM connectors without rewriting the Clean Core.
 
 ## Dependency rule
 
 ```text
-UI
- ↓
-Application
- ↓
+React UI
+   ↓
+Application / public contracts
+   ↓
 Clean Core
+
+Composition root
+   ├── Application
+   └── Adapters
 ```
 
-The Clean Core must not import React, browser APIs, file parser libraries, CRM SDKs or AI providers.
+Adapters and future infrastructure implement application-facing contracts. The Clean Core must never import React, browser APIs, file parser libraries, databases, authentication SDKs, CRM SDKs or AI providers.
 
 ## Logical layers
 
@@ -22,72 +26,213 @@ The Clean Core must not import React, browser APIs, file parser libraries, CRM S
 
 Framework-independent TypeScript containing:
 
-- canonical domain model;
+- canonical lead model;
+- stable record identity and source provenance;
 - normalization;
 - validation;
 - deduplication;
 - quality classification;
-- processing pipeline.
+- configurable processing strategies;
+- deterministic processing pipeline.
+
+The current canonical fields remain the standard DemandLint B2B lead schema. Records also expose `customFields` as an extension point so future CRM-specific fields do not require adding dozens of properties to the standard schema.
+
+### Application
+
+Owns use cases and product workflow contracts:
+
+- `ImportSession` and multiple import sources;
+- source mapping validation;
+- review/export shaping;
+- account and organization domain contracts;
+- source/destination mapping contracts;
+- ports for authentication, organizations, saved mapping templates and destination connectors.
+
+Application code may depend on the Clean Core but must not depend on React.
 
 ### Adapters
 
-Future boundary layer for:
+Translate external formats and runtime APIs into DemandLint contracts:
 
 - CSV parsing;
 - XLSX parsing;
-- CSV export;
-- browser file APIs.
+- browser file access;
+- CSV serialization/download;
+- future API/database repositories;
+- future Salesforce, HubSpot, Dynamics and other connectors.
 
-### Application layer
+### Composition
 
-Coordinates adapters and Clean Core. It should contain workflow orchestration, not business rules.
+The composition layer is the only place that wires application use cases to concrete browser/infrastructure adapters. React may call composition functions but should not import adapters or Core modules directly.
 
 ### UI
 
-React/Vite wizard for Upload → Map → Review → Export.
+React components render state and invoke application/composition operations. UI components must not contain data-quality rules, CRM-specific logic or persistence logic.
+
+## Import session model
+
+V0.1.1 introduces an explicit import session:
+
+```text
+ImportSession
+  ├── Source A
+  │    ├── Parsed table
+  │    ├── Mapping plan
+  │    ├── Confirmed source mapping
+  │    └── Analysis result
+  └── Source B
+       └── ...
+```
+
+The current UI still exposes one source at a time, but the application model can hold multiple sources without changing the Core.
+
+## Record identity and provenance
+
+A row number alone is not a safe identifier once multiple files are present. Every canonical record now carries:
+
+```text
+recordId
+provenance.sourceId
+provenance.sourceName
+provenance.rowNumber
+provenance.sourceType
+provenance.sheetName (when relevant)
+```
+
+`sourceRow` remains temporarily for V0.1 compatibility and is deprecated in favor of provenance.
+
+This allows duplicate/conflict evidence such as:
+
+```text
+Duplicate between Cvent.csv row 54 and Partner.xlsx row 18
+```
+
+without row-number collisions.
+
+## Mapping model
+
+DemandLint distinguishes two concepts.
+
+### Source mapping
+
+Maps incoming columns to the DemandLint schema:
+
+```text
+"Correo electrónico" → email
+"Empresa"            → company
+```
+
+### Destination mapping
+
+Maps DemandLint fields to an external destination schema:
+
+```text
+email   → Salesforce.Email
+company → Salesforce.Company
+```
+
+Saved `MappingTemplate` contracts can contain a source mapping, a destination mapping, or both. This allows one recurring source export to be reused with multiple destinations and vice versa.
+
+## Authentication and organizations
+
+Authentication is outside the Clean Core. The application exposes an `AuthGateway` supporting abstract sign-in methods such as password, Google, Microsoft, OIDC and SAML.
+
+The tenancy model is membership-based:
+
+```text
+User ← Membership → Organization
+```
+
+A user can therefore belong to multiple organizations. Roles are currently modeled as owner/admin/member. No concrete authentication provider or database is selected in V0.1.1.
+
+## CRM / destination connectors
+
+External systems implement the `DestinationConnector` port. A connector is responsible for:
+
+- connection testing;
+- destination schema discovery;
+- accepting a destination mapping;
+- pushing records;
+- returning accepted/rejected counts and per-record errors.
+
+The Clean Core never knows that Salesforce, HubSpot or Dynamics exists.
+
+## Local data plane and future cloud control plane
+
+Target architecture:
+
+```text
+Cloud control plane
+  users
+  organizations
+  memberships
+  mapping templates
+  recipes
+  encrypted connector credentials
+  audit logs
+
+Browser data plane
+  source file parsing
+  mapping
+  normalization
+  validation
+  deduplication
+  merge/review
+```
+
+Lead files can therefore continue to be processed locally even after authentication and persistence are introduced. Server-side processing should only be added when a feature explicitly requires it.
+
+## Processing strategies
+
+`processDataset()` accepts strategy contracts for validation and duplicate detection. The default deterministic behavior is unchanged, but future recipes can substitute stricter validation or different deduplication policies without branching the pipeline.
 
 ## Core processing pipeline
 
 ```text
 Raw rows
   ↓
-Column mapping
+Source mapping
   ↓
-Normalization
+Normalization + provenance
   ↓
-Validation
+Validation strategy
   ↓
-Duplicate detection
+Duplicate strategy
   ↓
 Ready / Review / Blocked classification
   ↓
 Processed dataset + issues + stats
 ```
 
-## Determinism
-
-For the same input rows, mapping and recipe configuration, the Clean Core must return the same output. This makes regression testing and user trust easier.
+Issues are grouped by stable record identity rather than repeatedly scanning all issues by row number.
 
 ## Data privacy
 
-V0.1 should process source lead data in the browser. The application should not upload the source file to a backend. If AI assistance is introduced later, it must sit behind an explicit adapter and the minimum necessary data should be sent.
+Source lead data remains processed in the browser in V0.1.1. Authentication, organization settings and saved templates can later be stored in a backend without requiring raw lead files to be stored there.
+
+Credentials for CRM connectors must never be persisted directly in browser code. Future OAuth refresh tokens and client secrets belong in encrypted server-side infrastructure.
 
 ## Error philosophy
 
 DemandLint does not silently discard bad data.
 
-- automatic deterministic corrections create informational normalization issues;
+- deterministic corrections create informational normalization issues;
 - ambiguous conditions create warnings and require review;
 - invalid required data creates blocking errors;
-- rejected/review rows remain exportable.
+- duplicate/conflict evidence retains source provenance;
+- review/blocked rows remain exportable.
 
-## Future extension points
+## Current deliberate limitations
 
-The architecture should allow later adapters for:
+V0.1.1 prepares but does not yet implement:
 
-- CRM-specific export recipes;
-- saved team recipes;
-- optional AI-assisted column mapping;
-- additional DemandLint modules such as UTM or campaign naming QA.
+- real authentication or SSO;
+- a database;
+- organization administration UI;
+- persistent mapping templates;
+- visible multi-file merge workflow;
+- CRM OAuth connections;
+- CRM-specific destination adapters;
+- streaming/Web Worker processing for very large datasets.
 
-These are not V0.1 requirements.
+These features should be added behind the contracts introduced here rather than by modifying the Clean Core for each provider.
