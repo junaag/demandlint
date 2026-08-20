@@ -4,6 +4,7 @@ import type {
   DataIssue,
   IssueType,
   ProcessedDataset,
+  RecordId,
 } from "../core/domain";
 
 export type QualityStatus = "ready" | "review" | "blocked";
@@ -30,6 +31,8 @@ export const REVIEW_EXPORT_COLUMNS = [
   ...CANONICAL_EXPORT_FIELDS,
   "_quality_status",
   "_quality_issue",
+  "_record_id",
+  "_source_name",
   "_source_row",
 ] as const;
 
@@ -38,38 +41,40 @@ export type CanonicalExportRow = Record<CanonicalField, string>;
 export type ReviewExportRow = CanonicalExportRow & {
   _quality_status: QualityStatus;
   _quality_issue: string;
+  _record_id: string;
+  _source_name: string;
   _source_row: string;
 };
 
-function rowSet(leads: readonly CanonicalLead[]): Set<number> {
-  return new Set(leads.map((lead) => lead.sourceRow));
+function recordSet(leads: readonly CanonicalLead[]): Set<RecordId> {
+  return new Set(leads.map((lead) => lead.recordId));
 }
 
-function statusForRow(
-  sourceRow: number,
-  readyRows: Set<number>,
-  reviewRows: Set<number>,
+function statusForRecord(
+  recordId: RecordId,
+  readyRecords: ReadonlySet<RecordId>,
+  reviewRecords: ReadonlySet<RecordId>,
 ): QualityStatus {
-  if (readyRows.has(sourceRow)) return "ready";
-  if (reviewRows.has(sourceRow)) return "review";
+  if (readyRecords.has(recordId)) return "ready";
+  if (reviewRecords.has(recordId)) return "review";
   return "blocked";
 }
 
 export function buildQualityReview(result: ProcessedDataset): QualityReviewRow[] {
-  const issuesByRow = new Map<number, DataIssue[]>();
+  const issuesByRecord = new Map<RecordId, DataIssue[]>();
   for (const issue of result.issues) {
-    const rowIssues = issuesByRow.get(issue.row) ?? [];
-    rowIssues.push(issue);
-    issuesByRow.set(issue.row, rowIssues);
+    const recordIssues = issuesByRecord.get(issue.recordId) ?? [];
+    recordIssues.push(issue);
+    issuesByRecord.set(issue.recordId, recordIssues);
   }
 
-  const readyRows = rowSet(result.ready);
-  const reviewRows = rowSet(result.review);
+  const readyRecords = recordSet(result.ready);
+  const reviewRecords = recordSet(result.review);
 
   return result.leads.map((lead) => ({
     lead,
-    status: statusForRow(lead.sourceRow, readyRows, reviewRows),
-    issues: issuesByRow.get(lead.sourceRow) ?? [],
+    status: statusForRecord(lead.recordId, readyRecords, reviewRecords),
+    issues: issuesByRecord.get(lead.recordId) ?? [],
   }));
 }
 
@@ -138,6 +143,8 @@ export function buildReviewExportRows(result: ProcessedDataset): ReviewExportRow
       ...canonicalExportRow(row.lead),
       _quality_status: row.status,
       _quality_issue: issueSummary(row.issues),
-      _source_row: String(row.lead.sourceRow),
+      _record_id: row.lead.recordId,
+      _source_name: row.lead.provenance.sourceName,
+      _source_row: String(row.lead.provenance.rowNumber),
     }));
 }
