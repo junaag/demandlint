@@ -45,7 +45,7 @@ function normalizeEmail(value: string): string {
 function validateEmail(value: string): string {
   const email = normalizeEmail(value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Saisissez une adresse e-mail professionnelle valide.");
+    throw new Error("Enter a valid work email address.");
   }
   return email;
 }
@@ -64,7 +64,7 @@ function profileNameFromEmail(email: string): string {
 
 function organizationNameFromEmail(email: string): string {
   const domain = email.split("@")[1]?.split(".")[0] ?? "";
-  return `${titleCase(domain) || "Mon"} workspace`;
+  return `${titleCase(domain) || "My"} workspace`;
 }
 
 function stableId(prefix: string, value: string): string {
@@ -96,7 +96,7 @@ export class LocalAccountWorkspaceRepository {
     const email = validateEmail(input.email);
     const database = this.read();
     if (database.users.some((candidate) => candidate.email === email)) {
-      throw new Error("Un compte existe déjà avec cet e-mail. Utilisez la page de connexion.");
+      throw new Error("An account already exists with this email. Use the sign-in page.");
     }
 
     const user: AccountUser = {
@@ -129,7 +129,7 @@ export class LocalAccountWorkspaceRepository {
     const database = this.read();
     const user = database.users.find((candidate) => candidate.email === email);
     if (!user) {
-      throw new Error("Aucun compte n’existe avec cet e-mail. Créez d’abord votre compte.");
+      throw new Error("No account exists with this email. Create your account first.");
     }
     database.currentUserId = user.id;
     const memberships = database.memberships.filter((item) => item.userId === user.id);

@@ -9,30 +9,30 @@ export function LegalPage({ kind }: LegalPageProps) {
     <main className="legal-page">
       <article className="legal-document">
         <header className="legal-header">
-          <a className="legal-brand" href="#signup" aria-label="Retour à DemandLint">
+          <a className="legal-brand" href="./" aria-label="Back to DemandLint">
             <span className="auth-brand-mark" aria-hidden="true">D</span>
             <strong>DemandLint</strong>
           </a>
-          <p className="legal-eyebrow">DOCUMENT JURIDIQUE</p>
-          <h1>{kind === "terms" ? "Conditions d’utilisation" : "Politique de confidentialité"}</h1>
-          <p>Dernière mise à jour : <time dateTime="2026-08-20">20 août 2026</time></p>
+          <p className="legal-eyebrow">LEGAL DOCUMENT</p>
+          <h1>{kind === "terms" ? "Terms and Conditions" : "Privacy Policy"}</h1>
+          <p>Last updated: <time dateTime="2026-08-20">August 20, 2026</time></p>
         </header>
 
         <div className="legal-draft-notice" role="note">
-          <strong>Version de travail</strong>
+          <strong>Working draft</strong>
           <span>
-            Les coordonnées complètes de l’éditeur et le droit applicable doivent être renseignés et
-            validés avant le lancement commercial de DemandLint.
+            The publisher’s complete legal details and the applicable governing law must be added and
+            reviewed before DemandLint launches commercially.
           </span>
         </div>
 
         {kind === "terms" ? <TermsContent /> : <PrivacyContent />}
 
-        <nav className="legal-navigation" aria-label="Documents juridiques">
-          <a href={kind === "terms" ? "#privacy" : "#terms"}>
-            {kind === "terms" ? "Consulter la politique de confidentialité" : "Consulter les conditions d’utilisation"}
+        <nav className="legal-navigation" aria-label="Legal documents">
+          <a href={kind === "terms" ? "?page=privacy" : "?page=terms"}>
+            {kind === "terms" ? "Read the Privacy Policy" : "Read the Terms and Conditions"}
           </a>
-          <a href="#signup">Retour à la création de compte</a>
+          <a href="./">Back to account creation</a>
         </nav>
       </article>
     </main>
@@ -43,98 +43,96 @@ function TermsContent() {
   return (
     <div className="legal-content">
       <section>
-        <h2>1. Objet et acceptation</h2>
+        <h2>1. Purpose and acceptance</h2>
         <p>
-          Les présentes conditions encadrent l’accès et l’utilisation de DemandLint, un outil de
-          préparation et de contrôle qualité de fichiers de contacts avant import dans un CRM. En
-          utilisant le service, vous acceptez ces conditions. DemandLint est actuellement proposé en
-          version de prévisualisation et peut évoluer.
+          These Terms govern access to and use of DemandLint, a tool that prepares and checks contact
+          files before they are imported into a CRM. By using the service, you agree to these Terms.
+          DemandLint is currently provided as a preview and may evolve.
         </p>
       </section>
 
       <section>
-        <h2>2. Public concerné</h2>
+        <h2>2. Intended users</h2>
         <p>
-          DemandLint est destiné à un usage professionnel. Vous devez disposer de la capacité et des
-          autorisations nécessaires pour agir au nom de votre organisation et traiter les données que
-          vous importez.
+          DemandLint is intended for professional use. You must have the authority and permissions
+          required to act for your organization and process any data you import.
         </p>
       </section>
 
       <section>
-        <h2>3. Fonctionnement du service</h2>
+        <h2>3. How the service works</h2>
         <p>
-          DemandLint lit des fichiers CSV ou XLSX, aide à associer leurs colonnes à des champs CRM,
-          contrôle la qualité des données, normalise certains champs, détecte les doublons et produit
-          des fichiers d’export. Dans la version actuelle, ces opérations sont réalisées localement dans
-          votre navigateur : les fichiers de contacts ne sont pas envoyés à un serveur DemandLint.
+          DemandLint reads CSV and XLSX files, helps map source columns to CRM fields, checks data
+          quality, normalizes selected fields, identifies duplicates and generates export files. In the
+          current version, these operations run locally in your browser. Contact files are not uploaded
+          to a DemandLint server.
         </p>
       </section>
 
       <section>
-        <h2>4. Compte de prévisualisation</h2>
+        <h2>4. Preview account</h2>
         <p>
-          Le compte, les organisations, les préférences et les modèles de mapping sont enregistrés dans
-          le stockage local du navigateur. Aucun mot de passe n’est collecté. Ce mécanisme n’est pas une
-          authentification de production et ne permet ni synchronisation entre appareils ni récupération
-          automatique après suppression des données du navigateur.
+          Your account, organizations, preferences and mapping templates are saved in your browser’s
+          local storage. DemandLint does not collect a password. This is not production authentication
+          and does not provide cross-device synchronization or automatic recovery after browser data is
+          deleted.
         </p>
       </section>
 
       <section>
-        <h2>5. Vos responsabilités</h2>
+        <h2>5. Your responsibilities</h2>
         <ul>
-          <li>utiliser uniquement des données obtenues et traitées légalement ;</li>
-          <li>respecter le RGPD, les règles de prospection et toute réglementation applicable ;</li>
-          <li>vérifier les résultats avant tout import dans un CRM ou toute prise de contact ;</li>
-          <li>conserver une copie de sauvegarde des fichiers sources et exports utiles ;</li>
-          <li>ne pas chercher à compromettre, détourner ou perturber le service.</li>
+          <li>only use data that was lawfully obtained and may lawfully be processed;</li>
+          <li>comply with the GDPR, marketing rules and all other applicable regulations;</li>
+          <li>review all results before importing them into a CRM or contacting anyone;</li>
+          <li>retain any necessary backups of source and export files; and</li>
+          <li>not compromise, misuse, reverse engineer or disrupt the service.</li>
         </ul>
       </section>
 
       <section>
-        <h2>6. Propriété intellectuelle</h2>
+        <h2>6. Intellectual property</h2>
         <p>
-          DemandLint, son interface, son code, sa marque et ses contenus restent la propriété de leur
-          titulaire. Vous conservez vos droits sur les données et fichiers que vous utilisez. L’accès au
-          service ne transfère aucun droit de propriété intellectuelle.
+          DemandLint, its interface, code, brand and content remain the property of their respective
+          owner. You retain your rights in the data and files you use. Access to the service does not
+          transfer any intellectual property rights.
         </p>
       </section>
 
       <section>
-        <h2>7. Disponibilité et évolution</h2>
+        <h2>7. Availability and changes</h2>
         <p>
-          Le service de prévisualisation est fourni en l’état. Des fonctionnalités peuvent être ajoutées,
-          modifiées, suspendues ou supprimées, notamment pour des raisons de sécurité, de conformité ou
-          d’amélioration du produit. Aucune disponibilité continue n’est garantie à ce stade.
+          The preview service is provided as is. Features may be added, changed, suspended or removed for
+          security, compliance or product-improvement reasons. Continuous availability is not guaranteed
+          at this stage.
         </p>
       </section>
 
       <section>
-        <h2>8. Résultats et limitation</h2>
+        <h2>8. Results and limitations</h2>
         <p>
-          Les contrôles DemandLint assistent votre revue mais ne garantissent ni l’exactitude complète des
-          données, ni leur conformité juridique, ni leur compatibilité avec chaque configuration CRM. Vous
-          restez responsable de la validation finale et de l’usage des exports. Les limitations de
-          responsabilité définitives devront être adaptées au statut de l’éditeur et au droit applicable.
+          DemandLint’s checks support your review but do not guarantee that data is fully accurate,
+          legally compliant or compatible with every CRM configuration. You remain responsible for final
+          validation and for your use of every export. Final liability provisions must be adapted to the
+          publisher’s legal status and the applicable law.
         </p>
       </section>
 
       <section>
-        <h2>9. Suspension et fin d’utilisation</h2>
+        <h2>9. Suspension and termination</h2>
         <p>
-          Vous pouvez cesser d’utiliser DemandLint à tout moment et supprimer les données locales du site
-          depuis les réglages de votre navigateur. L’accès peut être suspendu en cas d’usage illicite,
-          frauduleux, abusif ou susceptible de nuire au service ou à des tiers.
+          You may stop using DemandLint at any time and delete the site’s local data from your browser
+          settings. Access may be suspended in the event of unlawful, fraudulent or abusive use, or use
+          that could harm the service or a third party.
         </p>
       </section>
 
       <section>
-        <h2>10. Éditeur, contact et droit applicable</h2>
+        <h2>10. Publisher, contact and governing law</h2>
         <p className="legal-placeholder">
-          À compléter avant lancement : raison sociale ou identité de l’éditeur, forme juridique, capital,
-          immatriculation, adresse du siège, e-mail de contact, représentant de la publication, droit
-          applicable et juridiction compétente.
+          To be completed before launch: publisher name or legal entity, legal form, share capital,
+          registration details, registered address, contact email, publication representative,
+          governing law and competent courts.
         </p>
       </section>
     </div>
@@ -145,120 +143,115 @@ function PrivacyContent() {
   return (
     <div className="legal-content">
       <section>
-        <h2>1. Responsable du traitement</h2>
+        <h2>1. Data controller</h2>
         <p>
-          L’entité qui exploite DemandLint est responsable des traitements décrits dans cette politique.
-          Ses coordonnées légales et son adresse de contact dédiée à la protection des données doivent
-          être renseignées avant le lancement commercial.
+          The entity operating DemandLint is the controller for the processing described in this Policy.
+          Its full legal details and dedicated privacy contact address must be added before commercial
+          launch.
         </p>
       </section>
 
       <section>
-        <h2>2. Données enregistrées par DemandLint</h2>
-        <p>Dans la version actuelle, le navigateur peut enregistrer localement :</p>
+        <h2>2. Data saved by DemandLint</h2>
+        <p>In the current version, your browser may save the following information locally:</p>
         <ul>
-          <li>votre e-mail professionnel et le nom de profil qui en est dérivé ;</li>
-          <li>vos organisations, membres, rôles et organisation active ;</li>
-          <li>vos préférences de priorité pour les téléphones et e-mails ;</li>
-          <li>vos modèles de correspondance de colonnes.</li>
+          <li>your work email and the profile name derived from it;</li>
+          <li>your organizations, members, roles and active organization;</li>
+          <li>your phone and email priority preferences; and</li>
+          <li>your column-mapping templates.</li>
         </ul>
-        <p>Aucun mot de passe n’est demandé ou stocké par DemandLint.</p>
+        <p>DemandLint does not request or store a password.</p>
       </section>
 
       <section>
-        <h2>3. Fichiers de contacts</h2>
+        <h2>3. Contact files</h2>
         <p>
-          Les fichiers CSV et XLSX, leur contenu et les exports générés sont traités localement dans votre
-          navigateur. Ils ne sont pas téléversés vers un backend DemandLint dans cette version. Fermer la
-          page ou supprimer les données du site met fin à l’accès local concerné, sous réserve des fichiers
-          que vous avez vous-même téléchargés ou conservés.
+          CSV and XLSX files, their contents and generated exports are processed locally in your
+          browser. They are not uploaded to a DemandLint backend in this version. Closing the page or
+          deleting site data ends the related local access, except for files you downloaded or retained
+          yourself.
         </p>
       </section>
 
       <section>
-        <h2>4. Finalités et bases juridiques</h2>
+        <h2>4. Purposes and legal bases</h2>
         <p>
-          Les données de profil et de configuration servent à fournir l’espace de travail demandé, à
-          mémoriser vos préférences et à sécuriser le fonctionnement de la prévisualisation. La base
-          juridique précise de chaque traitement devra être confirmée selon l’identité de l’éditeur, le
-          modèle commercial retenu et le parcours contractuel final.
+          Profile and configuration data are used to provide the requested workspace, remember your
+          preferences and operate the preview. The precise legal basis for each processing activity must
+          be confirmed once the publisher, commercial model and final contractual journey are defined.
         </p>
       </section>
 
       <section>
-        <h2>5. Hébergement et données techniques</h2>
+        <h2>5. Hosting and technical data</h2>
         <p>
-          Le site est actuellement publié avec GitHub Pages. Comme tout hébergeur web, GitHub peut traiter
-          des données techniques nécessaires à la fourniture et à la sécurité du service, telles que
-          l’adresse IP, le navigateur, l’appareil et les journaux de requêtes, selon sa propre documentation
-          et sa politique de confidentialité.
+          The site is currently hosted on GitHub Pages. Like any web host, GitHub may process technical
+          data required to deliver and secure the service, including IP address, browser, device and
+          request logs, under its own documentation and privacy statement.
         </p>
       </section>
 
       <section>
-        <h2>6. Destinataires et transferts</h2>
+        <h2>6. Recipients and international transfers</h2>
         <p>
-          DemandLint ne vend pas vos données. Dans la version actuelle, aucun fichier de contacts n’est
-          transmis à un fournisseur DemandLint. Les éventuels traitements techniques opérés par GitHub
-          relèvent de son infrastructure. Toute future authentification, synchronisation cloud ou mesure
-          d’audience devra être ajoutée à cette politique avant son activation.
+          DemandLint does not sell your data. In the current version, contact files are not shared with a
+          DemandLint provider. Any technical processing performed by GitHub takes place within GitHub’s
+          infrastructure. Future authentication, cloud synchronization or analytics must be added to this
+          Policy before being enabled.
         </p>
       </section>
 
       <section>
-        <h2>7. Cookies et stockage local</h2>
+        <h2>7. Cookies and local storage</h2>
         <p>
-          DemandLint n’utilise actuellement ni cookie publicitaire ni outil d’analyse d’audience. Le
-          stockage local du navigateur est utilisé pour conserver le profil de test et les préférences de
-          l’espace de travail. Vous pouvez le supprimer depuis les paramètres de confidentialité de votre
-          navigateur.
+          DemandLint currently uses no advertising cookies or audience-analytics tool. Browser local
+          storage retains the preview profile and workspace preferences. You can delete this information
+          from your browser’s privacy or site-data settings.
         </p>
       </section>
 
       <section>
-        <h2>8. Durée de conservation</h2>
+        <h2>8. Retention</h2>
         <p>
-          Les données locales restent sur l’appareil jusqu’à leur suppression par l’utilisateur, la
-          réinitialisation du navigateur ou une évolution du service. Les durées applicables aux éventuels
-          journaux techniques de GitHub sont déterminées par GitHub.
+          Local data remains on the device until the user deletes it, the browser is reset or the service
+          changes. GitHub determines the retention periods that apply to its own technical logs.
         </p>
       </section>
 
       <section>
-        <h2>9. Sécurité</h2>
+        <h2>9. Security</h2>
         <p>
-          Le traitement local limite le transfert des fichiers de contacts, mais la sécurité dépend aussi
-          de votre appareil, de votre navigateur et de vos pratiques. N’utilisez pas la prévisualisation sur
-          un appareil partagé pour des données sensibles et vérifiez les fichiers avant tout usage CRM.
+          Local processing limits transfers of contact files, but security also depends on your device,
+          browser and practices. Do not use the preview for sensitive data on a shared device, and review
+          every file before using it in a CRM.
         </p>
       </section>
 
       <section>
-        <h2>10. Vos droits</h2>
+        <h2>10. Your rights</h2>
         <p>
-          Selon le RGPD et la législation applicable, vous pouvez disposer de droits d’accès, de
-          rectification, d’effacement, de limitation, d’opposition et de portabilité. Pour les données
-          uniquement stockées dans votre navigateur, vous pouvez agir directement en supprimant les données
-          du site. Une adresse d’exercice des droits doit être publiée avant lancement. Vous pouvez également
-          introduire une réclamation auprès de la CNIL ou de l’autorité de contrôle compétente.
+          Depending on the GDPR and applicable law, you may have rights of access, correction, deletion,
+          restriction, objection and portability. For data stored only in your browser, you can act
+          directly by deleting the site’s local data. A privacy-rights contact address must be published
+          before launch. You may also lodge a complaint with the French CNIL or another competent data
+          protection authority.
         </p>
       </section>
 
       <section>
-        <h2>11. Évolution de cette politique</h2>
+        <h2>11. Changes to this Policy</h2>
         <p>
-          Cette politique sera mise à jour lorsque l’architecture, les fournisseurs, les finalités ou les
-          obligations de DemandLint évolueront. La date de mise à jour affichée en haut de page permet
-          d’identifier la version applicable.
+          This Policy will be updated when DemandLint’s architecture, providers, purposes or obligations
+          change. The date at the top of this page identifies the current version.
         </p>
       </section>
 
       <section>
-        <h2>12. Coordonnées à compléter</h2>
+        <h2>12. Details to be completed</h2>
         <p className="legal-placeholder">
-          À compléter avant lancement : identité et adresse du responsable de traitement, e-mail de contact
-          confidentialité, éventuel délégué à la protection des données, liste finale des sous-traitants et
-          mécanismes de transfert hors Espace économique européen.
+          To be completed before launch: identity and address of the data controller, privacy contact
+          email, any data protection officer, final list of processors and mechanisms for transfers
+          outside the European Economic Area.
         </p>
       </section>
     </div>

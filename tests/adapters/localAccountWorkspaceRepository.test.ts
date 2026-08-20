@@ -23,13 +23,13 @@ describe("local account workspace repository", () => {
     expect(reopened.organizations).toHaveLength(1);
     expect(reopened.organizations[0]?.name).toBe("Company workspace");
     expect(() => repository.createAccount({ email: "alex.martin@company.com" }))
-      .toThrow("Un compte existe déjà");
+      .toThrow("An account already exists");
   });
 
   it("does not silently create an unknown account from the login page", () => {
     const repository = new LocalAccountWorkspaceRepository(new MemoryStorage());
     expect(() => repository.signIn("unknown@company.com"))
-      .toThrow("Aucun compte n’existe");
+      .toThrow("No account exists");
   });
 
   it("keeps multiple organizations and allows owners to add members", () => {

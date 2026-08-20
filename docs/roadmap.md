@@ -111,6 +111,7 @@ claim secure authentication or cross-device synchronization.
 - add a clear link between registration and login;
 - redesign the authentication card around Google/Microsoft/organization entry points and a focused email form;
 - publish DemandLint-specific Conditions of Use and Privacy Policy drafts documenting the local-first preview.
+- keep registration as the English-language homepage and expose login and legal pages through distinct reload-safe URLs.
 
 ## Next: hosted accounts & validation-driven releases
 

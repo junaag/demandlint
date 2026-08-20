@@ -11,12 +11,15 @@ keeping the V0.2 local-preview boundary explicit.
 - automatic preview profile name derived from the email local part;
 - automatic initial workspace name derived from the email domain;
 - dedicated returning-user login mode;
-- visible **Se connecter** link from registration and **Créer un compte** link from login;
+- visible **Sign in** link from registration and **Create an account for free** link from login;
 - login error when the local profile does not exist, instead of silently creating one;
 - duplicate-registration error directing the user to login;
 - Google and Microsoft provider buttons positioned for the future hosted adapter;
 - Google, Microsoft and organization SSO options shown on the returning-user screen;
 - centered responsive authentication card inspired by the supplied SaaS reference;
+- richer registration homepage with product context beside the focused account form;
+- registration at the application root and a reload-safe dedicated `?page=login` URL;
+- all public account, error and legal copy in English;
 - linked DemandLint Conditions of Use and Privacy Policy drafts;
 - legal copy documenting local file processing, browser storage and the current GitHub Pages boundary;
 - no password, CAPTCHA or fake social authentication in the local preview;
@@ -24,17 +27,18 @@ keeping the V0.2 local-preview boundary explicit.
 
 ## Acceptance test
 
-1. Open DemandLint with no existing local session.
-2. Confirm that registration contains only **E-mail professionnel**.
-3. Confirm the presence of Google and Microsoft buttons and the **Se connecter** link.
+1. Open DemandLint with no existing local session and confirm registration is the homepage.
+2. Confirm that registration contains only **Work email**.
+3. Confirm the presence of Google and Microsoft buttons and the **Sign in** link.
 4. Create an account with a new email and verify that DemandLint opens the import workspace.
-5. Sign out and select **Se connecter**.
-6. Confirm the Google, Microsoft and **Organisation** entry points are visible.
+5. Sign out and select **Sign in**.
+6. Confirm the Google, Microsoft and **Organization** entry points are visible.
 7. Enter the same email and verify that the existing workspace reopens.
 8. Sign out and try an unknown email on the login screen; verify that no account is created.
 9. Return to account creation and try the existing email; verify that the UI directs you to login.
 10. Check the authentication card on desktop and mobile widths.
-11. Open **Conditions d’utilisation** and **Politique de confidentialité** from registration.
+11. Open **Terms and Conditions** and **Privacy Policy** from registration.
+12. Reload the login, Terms and Privacy URLs and confirm each route remains open.
 
 ## Still not production authentication
 
