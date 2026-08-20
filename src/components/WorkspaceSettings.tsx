@@ -26,6 +26,40 @@ interface WorkspaceSettingsProps {
   onDeleteAccount?: () => Promise<void>;
 }
 
+type SettingsSection = "organization" | "members" | "preferences" | "danger";
+
+interface SettingsAlert {
+  kind: "error" | "success";
+  message: string;
+}
+
+function DismissibleAlert({
+  alert,
+  onDismiss,
+}: {
+  alert: SettingsAlert | undefined;
+  onDismiss: () => void;
+}) {
+  if (!alert) return null;
+
+  return (
+    <div
+      className={`alert contextual-alert ${alert.kind === "error" ? "error-alert" : "success-alert"}`}
+      role={alert.kind === "error" ? "alert" : "status"}
+    >
+      <span>{alert.message}</span>
+      <button
+        className="alert-dismiss"
+        type="button"
+        aria-label="Dismiss notification"
+        onClick={onDismiss}
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+  );
+}
+
 export function WorkspaceSettings({
   workspace,
   members,
@@ -44,10 +78,9 @@ export function WorkspaceSettings({
   const [organizationName, setOrganizationName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<MembershipRole>("member");
-  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [memberAction, setMemberAction] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<Partial<Record<SettingsSection, SettingsAlert>>>({});
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const activeOrganization = workspace.organizations.find(
@@ -57,16 +90,34 @@ export function WorkspaceSettings({
     (item) => item.organizationId === workspace.session.activeOrganizationId,
   );
 
+  function showAlert(section: SettingsSection, alert: SettingsAlert) {
+    setAlerts((current) => ({ ...current, [section]: alert }));
+  }
+
+  function dismissAlert(section: SettingsSection) {
+    setAlerts((current) => {
+      const next = { ...current };
+      delete next[section];
+      return next;
+    });
+  }
+
   async function createOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setNotice(null);
+    dismissAlert("organization");
     setBusy(true);
     try {
       await onCreateOrganization(organizationName);
       setOrganizationName("");
+      showAlert("organization", {
+        kind: "success",
+        message: "Workspace created successfully.",
+      });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The organization could not be created.");
+      showAlert("organization", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "The organization could not be created.",
+      });
     } finally {
       setBusy(false);
     }
@@ -74,15 +125,20 @@ export function WorkspaceSettings({
 
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setNotice(null);
+    dismissAlert("members");
     setBusy(true);
     try {
       await onAddMember(memberEmail, memberRole);
-      setNotice(`Invitation sent to ${memberEmail.trim().toLowerCase()}.`);
+      showAlert("members", {
+        kind: "success",
+        message: `Invitation sent to ${memberEmail.trim().toLowerCase()}.`,
+      });
       setMemberEmail("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The member could not be added.");
+      showAlert("members", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "The member could not be added.",
+      });
     } finally {
       setBusy(false);
     }
@@ -95,22 +151,24 @@ export function WorkspaceSettings({
     if (action === "cancel" && !window.confirm(`Cancel the invitation for ${member.user.email}?`)) return;
     if (action === "revoke" && !window.confirm(`Revoke workspace access for ${member.user.email}?`)) return;
     const actionKey = `${action}:${member.user.id}`;
-    setError(null);
-    setNotice(null);
+    dismissAlert("members");
     setMemberAction(actionKey);
     try {
       if (action === "resend") {
         await onResendInvitation(member.user.id);
-        setNotice(`Invitation resent to ${member.user.email}.`);
+        showAlert("members", { kind: "success", message: `Invitation resent to ${member.user.email}.` });
       } else if (action === "cancel") {
         await onCancelInvitation(member.user.id);
-        setNotice(`Invitation cancelled for ${member.user.email}.`);
+        showAlert("members", { kind: "success", message: `Invitation cancelled for ${member.user.email}.` });
       } else {
         await onRevokeMember(member.user.id);
-        setNotice(`Workspace access revoked for ${member.user.email}.`);
+        showAlert("members", { kind: "success", message: `Workspace access revoked for ${member.user.email}.` });
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The member action could not be completed.");
+      showAlert("members", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "The member action could not be completed.",
+      });
     } finally {
       setMemberAction(null);
     }
@@ -124,14 +182,19 @@ export function WorkspaceSettings({
     const actionLabel = role === "admin" ? "promote to admin" : "change to member";
     if (!window.confirm(`${actionLabel.charAt(0).toUpperCase()}${actionLabel.slice(1)} for ${member.user.email}?`)) return;
     const actionKey = `role:${member.user.id}`;
-    setError(null);
-    setNotice(null);
+    dismissAlert("members");
     setMemberAction(actionKey);
     try {
       await onUpdateMemberRole(member.user.id, role);
-      setNotice(`${member.user.email} is now ${role === "admin" ? "an admin" : "a member"}.`);
+      showAlert("members", {
+        kind: "success",
+        message: `${member.user.email} is now ${role === "admin" ? "an admin" : "a member"}.`,
+      });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The member role could not be changed.");
+      showAlert("members", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "The member role could not be changed.",
+      });
     } finally {
       setMemberAction(null);
     }
@@ -142,14 +205,19 @@ export function WorkspaceSettings({
       `Transfer ownership to ${member.user.email}? You will become an admin of this workspace.`,
     )) return;
     const actionKey = `ownership:${member.user.id}`;
-    setError(null);
-    setNotice(null);
+    dismissAlert("members");
     setMemberAction(actionKey);
     try {
       await onTransferOwnership(member.user.id);
-      setNotice(`${member.user.email} is now the workspace owner. Your role is now admin.`);
+      showAlert("members", {
+        kind: "success",
+        message: `${member.user.email} is now the workspace owner. Your role is now admin.`,
+      });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Ownership could not be transferred.");
+      showAlert("members", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "Ownership could not be transferred.",
+      });
     } finally {
       setMemberAction(null);
     }
@@ -158,13 +226,32 @@ export function WorkspaceSettings({
   async function deleteAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!onDeleteAccount || deleteConfirmation !== "DELETE") return;
-    setError(null);
+    dismissAlert("danger");
     setBusy(true);
     try {
       await onDeleteAccount();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The account could not be deleted.");
+      showAlert("danger", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "The account could not be deleted.",
+      });
       setBusy(false);
+    }
+  }
+
+  async function updatePreferences(nextPreferences: ContactPreferences) {
+    dismissAlert("preferences");
+    try {
+      await onPreferencesChange(nextPreferences);
+      showAlert("preferences", {
+        kind: "success",
+        message: "Contact preferences saved.",
+      });
+    } catch (caught) {
+      showAlert("preferences", {
+        kind: "error",
+        message: caught instanceof Error ? caught.message : "Preferences could not be saved.",
+      });
     }
   }
 
@@ -185,9 +272,6 @@ export function WorkspaceSettings({
         </span>
       </div>
 
-      {error && <div className="alert error-alert" role="alert">{error}</div>}
-      {notice && <div className="alert success-alert" role="status">{notice}</div>}
-
       <section className="settings-grid">
         <article className="panel settings-card">
           <p className="section-label">PROFILE</p>
@@ -196,23 +280,31 @@ export function WorkspaceSettings({
           <span className="role-badge">{activeMembership?.role ?? "member"}</span>
         </article>
 
-        <article className="panel settings-card">
-          <p className="section-label">NEW ORGANIZATION</p>
-          <h2>Create another workspace</h2>
-          <form className="inline-form" onSubmit={(event) => void createOrganization(event)}>
-            <input
-              value={organizationName}
-              onChange={(event) => setOrganizationName(event.target.value)}
-              placeholder="Organization name"
-            />
-            <button className="button ghost" type="submit" disabled={busy || !organizationName.trim()}>
-              Create
-            </button>
-          </form>
-        </article>
+        <div className="settings-section-stack">
+          <DismissibleAlert
+            alert={alerts.organization}
+            onDismiss={() => dismissAlert("organization")}
+          />
+          <article className="panel settings-card">
+            <p className="section-label">NEW ORGANIZATION</p>
+            <h2>Create another workspace</h2>
+            <form className="inline-form" onSubmit={(event) => void createOrganization(event)}>
+              <input
+                value={organizationName}
+                onChange={(event) => setOrganizationName(event.target.value)}
+                placeholder="Organization name"
+              />
+              <button className="button ghost" type="submit" disabled={busy || !organizationName.trim()}>
+                Create
+              </button>
+            </form>
+          </article>
+        </div>
       </section>
 
-      <section className="panel members-panel">
+      <div className="settings-section-stack">
+        <DismissibleAlert alert={alerts.members} onDismiss={() => dismissAlert("members")} />
+        <section className="panel members-panel">
         <div className="section-heading compact-heading">
           <div>
             <p className="section-label">MEMBERS</p>
@@ -353,49 +445,59 @@ export function WorkspaceSettings({
             );
           })}
         </div>
-      </section>
+        </section>
+      </div>
 
-      <ContactPreferencesPanel
-        preferences={preferences}
-        onChange={onPreferencesChange}
-        storageDescription={hosted
-          ? " Preferences are synchronized for the active organization."
-          : " Preferences are saved for the active organization in this browser."}
-      />
+      <div className="settings-section-stack">
+        <DismissibleAlert
+          alert={alerts.preferences}
+          onDismiss={() => dismissAlert("preferences")}
+        />
+        <ContactPreferencesPanel
+          preferences={preferences}
+          onChange={(nextPreferences) => void updatePreferences(nextPreferences)}
+          storageDescription={hosted
+            ? " Preferences are synchronized for the active organization."
+            : " Preferences are saved for the active organization in this browser."}
+        />
+      </div>
 
       {onDeleteAccount && (
-        <section className="panel danger-zone">
-          <div>
-            <p className="section-label danger-label">DANGER ZONE</p>
-            <h2>Delete my account</h2>
-            <p>This permanently removes your profile and memberships. Lead files are not stored by DemandLint.</p>
-          </div>
-          {!deleteOpen ? (
-            <button className="button danger-button" type="button" onClick={() => setDeleteOpen(true)}>
-              Delete account
-            </button>
-          ) : (
-            <form className="delete-account-form" onSubmit={(event) => void deleteAccount(event)}>
-              <label>
-                <span>Type DELETE to confirm</span>
-                <input
-                  value={deleteConfirmation}
-                  onChange={(event) => setDeleteConfirmation(event.target.value)}
-                  autoComplete="off"
-                />
-              </label>
-              <div>
-                <button className="button ghost" type="button" disabled={busy} onClick={() => {
-                  setDeleteOpen(false);
-                  setDeleteConfirmation("");
-                }}>Cancel</button>
-                <button className="button danger-button" type="submit" disabled={busy || deleteConfirmation !== "DELETE"}>
-                  {busy ? "Deleting…" : "Delete permanently"}
-                </button>
-              </div>
-            </form>
-          )}
-        </section>
+        <div className="settings-section-stack">
+          <DismissibleAlert alert={alerts.danger} onDismiss={() => dismissAlert("danger")} />
+          <section className="panel danger-zone">
+            <div>
+              <p className="section-label danger-label">DANGER ZONE</p>
+              <h2>Delete my account</h2>
+              <p>This permanently removes your profile and memberships. Lead files are not stored by DemandLint.</p>
+            </div>
+            {!deleteOpen ? (
+              <button className="button danger-button" type="button" onClick={() => setDeleteOpen(true)}>
+                Delete account
+              </button>
+            ) : (
+              <form className="delete-account-form" onSubmit={(event) => void deleteAccount(event)}>
+                <label>
+                  <span>Type DELETE to confirm</span>
+                  <input
+                    value={deleteConfirmation}
+                    onChange={(event) => setDeleteConfirmation(event.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+                <div>
+                  <button className="button ghost" type="button" disabled={busy} onClick={() => {
+                    setDeleteOpen(false);
+                    setDeleteConfirmation("");
+                  }}>Cancel</button>
+                  <button className="button danger-button" type="submit" disabled={busy || deleteConfirmation !== "DELETE"}>
+                    {busy ? "Deleting…" : "Delete permanently"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+        </div>
       )}
     </div>
   );
