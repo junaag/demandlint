@@ -15,6 +15,9 @@ const invitationFunctionPath = fileURLToPath(
 const roleManagementMigrationPath = fileURLToPath(
   new URL("../../supabase/migrations/20260820_000003_workspace_role_management.sql", import.meta.url),
 );
+const accountDeletionPermissionMigrationPath = fileURLToPath(
+  new URL("../../supabase/migrations/20260820_000004_account_deletion_permissions.sql", import.meta.url),
+);
 
 describe("Supabase hosted account boundary", () => {
   it("enables RLS on every exposed DemandLint table", () => {
@@ -77,6 +80,15 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain("set role = 'owner'");
     expect(migration).not.toMatch(
       /create or replace function public\.[\s\S]{0,500}?security definer/i,
+    );
+  });
+
+  it("limits account deletion RPCs to authenticated sessions", () => {
+    const migration = readFileSync(accountDeletionPermissionMigrationPath, "utf8");
+
+    expect(migration).toContain("from public, anon, authenticated, service_role");
+    expect(migration).toContain(
+      "grant execute on function public.delete_current_account() to authenticated",
     );
   });
 });
