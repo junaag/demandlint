@@ -25,3 +25,23 @@ export interface AuthSession {
   memberships: OrganizationMembership[];
   activeOrganizationId?: OrganizationId;
 }
+
+export interface AccountWorkspace {
+  session: AuthSession;
+  organizations: Organization[];
+}
+
+export interface CreateAccountInput {
+  email: string;
+  displayName: string;
+  organizationName: string;
+}
+
+export interface CreateOrganizationInput {
+  name: string;
+}
+
+export interface OrganizationMember {
+  user: AccountUser;
+  membership: OrganizationMembership;
+}

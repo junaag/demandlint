@@ -18,6 +18,15 @@ export function sourceMappingFromRuntime(mapping: ColumnMapping): SourceMapping 
   );
 }
 
+export function runtimeMappingFromSourceMapping(mapping: SourceMapping): ColumnMapping {
+  return Object.fromEntries(
+    Object.entries(mapping).map(([sourceColumn, target]) => [
+      sourceColumn,
+      target.kind === "canonical" ? target.field : "ignore",
+    ]),
+  );
+}
+
 export interface DestinationFieldMapping {
   source: FieldReference;
   destinationField: string;

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { sourceMappingFromRuntime } from "../../src/application/mapping/contracts";
+import {
+  runtimeMappingFromSourceMapping,
+  sourceMappingFromRuntime,
+} from "../../src/application/mapping/contracts";
 
 
 describe("saved mapping contracts", () => {
@@ -21,5 +24,13 @@ describe("saved mapping contracts", () => {
     const customTarget = { kind: "custom" as const, key: "salesforceCampaignId" };
 
     expect(customTarget).toEqual({ kind: "custom", key: "salesforceCampaignId" });
+  });
+
+  it("restores a runtime mapping while safely ignoring future custom targets", () => {
+    expect(runtimeMappingFromSourceMapping({
+      Email: { kind: "canonical", field: "email" },
+      Notes: { kind: "custom", key: "notes" },
+      Internal: { kind: "ignore" },
+    })).toEqual({ Email: "email", Notes: "ignore", Internal: "ignore" });
   });
 });

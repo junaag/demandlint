@@ -88,7 +88,21 @@ Prepare the MVP for long-term product expansion without changing the user promis
 - export primary-only or complete typed contact fields;
 - flag invalid alternatives without discarding valid fallbacks.
 
-## Next: validation-driven releases
+## V0.2.0 — Account workspace preview
+
+- require a local test profile before entering the import workflow;
+- reopen profiles by normalized email without storing passwords;
+- create and switch organization workspaces;
+- model owner/admin/member access and local member simulation;
+- scope contact preferences by organization;
+- save, apply and delete source mapping templates by organization;
+- retain local-only lead processing;
+- keep account, organization and template persistence behind replaceable ports.
+
+This release validates the account and workspace UX on GitHub Pages. It deliberately does not
+claim secure authentication or cross-device synchronization.
+
+## Next: hosted accounts & validation-driven releases
 
 ### Product feedback / UX hardening
 
@@ -96,12 +110,13 @@ Use real event lead files and capture defects before expanding scope. Add browse
 
 ### Accounts & saved mappings
 
-- authentication;
-- Google and Microsoft sign-in;
+- hosted authentication and database adapter;
+- secure Google and Microsoft sign-in;
 - organization memberships and roles;
-- persistent source/destination mapping templates;
+- invitation acceptance and administration;
+- cross-device source/destination mapping templates;
 - team-level recipes.
-- synchronize the local contact preferences introduced in V0.1.3 with the authenticated user or organization.
+- synchronize V0.2 organization preferences across authenticated devices.
 
 ### Multi-source imports
 

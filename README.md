@@ -19,15 +19,16 @@ The first module focuses on **lead import quality**:
 
 ## Current workflow
 
-1. Upload CSV/XLSX (the best lead worksheet is selected automatically in multi-sheet workbooks)
-2. Confirm the worksheet when relevant, then detect and map columns
-3. Classify multiple emails and phones by role
-4. Select the best valid contact values using saved local priorities
-5. Normalize phone numbers to Salesforce-compatible E.164 values
-6. Validate required fields and contact quality
-7. Detect duplicates
-8. Review Ready / Review / Blocked rows
-9. Export `clean.csv` and `review.csv`, with primary-only or complete contact fields
+1. Create or reopen a local test profile and organization workspace
+2. Upload CSV/XLSX (the best lead worksheet is selected automatically in multi-sheet workbooks)
+3. Confirm the worksheet when relevant, then detect and map columns
+4. Save or apply organization-specific source mapping templates
+5. Classify multiple emails and phones by role
+6. Select the best valid contact values using organization-specific priorities
+7. Normalize phone numbers to Salesforce-compatible E.164 values
+8. Validate required fields, contact quality and duplicates
+9. Review Ready / Review / Blocked rows
+10. Export `clean.csv` and `review.csv`, with primary-only or complete contact fields
 
 Column recognition currently includes common EN / FR / ES / PT lead-export headers.
 
@@ -57,7 +58,10 @@ V0.1.1 prepares DemandLint for future SaaS capabilities without coupling them to
 - replaceable validation and deduplication strategies;
 - automated architecture-boundary tests.
 
-The current public UI remains local-first and single-source. No real authentication, database or CRM credential is introduced by V0.1.1.
+V0.2.0 adds a browser-backed account/workspace adapter to test the complete UX while preserving
+the same ports. Profiles, memberships, preferences and templates are isolated locally by
+organization. This preview is not production authentication and does not synchronize across
+devices; a hosted identity/database adapter will replace it without changing the Clean Core.
 
 ## Release status
 
@@ -72,6 +76,7 @@ Completed:
 - V0.1.1 — architecture hardening for saved mappings, multi-source imports, organizations and CRM connectors
 - V0.1.2 — automatic lead-sheet detection and manual worksheet selection for multi-sheet XLSX files
 - V0.1.3 — typed multi-email/multi-phone handling, configurable priorities, E.164 normalization and complete contact export
+- V0.2.0 — local account preview, organization workspaces, role simulation, organization-scoped preferences and saved mappings
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

@@ -75,11 +75,13 @@ function PriorityEditor<T extends string>({
 interface ContactPreferencesPanelProps {
   preferences: ContactPreferences;
   onChange: (preferences: ContactPreferences) => void;
+  storageDescription?: string;
 }
 
 export function ContactPreferencesPanel({
   preferences,
   onChange,
+  storageDescription = "Preferences are saved on this device.",
 }: ContactPreferencesPanelProps) {
   function update(patch: Partial<ContactPreferences>) {
     onChange({ ...preferences, ...patch });
@@ -93,7 +95,7 @@ export function ContactPreferencesPanel({
           <h2>Choose the best available contact details</h2>
           <p>
             DemandLint keeps every value, then selects the first valid one using these priorities.
-            Preferences are saved on this device.
+            {storageDescription}
           </p>
         </div>
       </div>
