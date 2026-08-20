@@ -1,4 +1,4 @@
-import type { ColumnMapping } from "../../core/domain";
+import type { ColumnMapping, ContactPreferences } from "../../core/domain";
 import { suggestColumnMapping } from "../../core/mapping/suggestColumnMapping";
 import { analyzeParsedTable } from "../analyzeParsedTable";
 import type { ImportSession, ImportSessionSource, ParsedTable } from "./domain";
@@ -60,6 +60,7 @@ export function updateImportSourceMapping(
 export function analyzeImportSource(
   session: ImportSession,
   sourceId: string,
+  contactPreferences: Partial<ContactPreferences> = {},
 ): ImportSession {
   let found = false;
   const sources = session.sources.map((source) => {
@@ -67,7 +68,7 @@ export function analyzeImportSource(
     found = true;
     return {
       ...source,
-      result: analyzeParsedTable(source.table, source.mapping, source.id),
+      result: analyzeParsedTable(source.table, source.mapping, source.id, contactPreferences),
     };
   });
 

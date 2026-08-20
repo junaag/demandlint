@@ -7,12 +7,30 @@ import {
   REVIEW_EXPORT_COLUMNS,
 } from "../application/qualityReview";
 import type { ProcessedDataset } from "../application/public";
+import type { ContactExportMode } from "../core/domain";
 
-const CLEAN_COLUMNS: CsvColumn[] = CANONICAL_EXPORT_FIELDS.map((field) => ({ key: field }));
+const TYPED_CONTACT_FIELDS = new Set([
+  "emailProfessional",
+  "emailSecondary",
+  "emailPersonal",
+  "phoneMobile",
+  "phoneDirect",
+  "phoneStandard",
+]);
+
+function cleanColumns(exportMode: ContactExportMode): CsvColumn[] {
+  return CANONICAL_EXPORT_FIELDS
+    .filter((field) => exportMode === "all" || !TYPED_CONTACT_FIELDS.has(field))
+    .map((field) => ({ key: field }));
+}
+
 const REVIEW_COLUMNS: CsvColumn[] = REVIEW_EXPORT_COLUMNS.map((field) => ({ key: field }));
 
-export function downloadCleanCsv(result: ProcessedDataset): void {
-  const csv = serializeCsv(CLEAN_COLUMNS, buildCleanExportRows(result));
+export function downloadCleanCsv(
+  result: ProcessedDataset,
+  exportMode: ContactExportMode = "all",
+): void {
+  const csv = serializeCsv(cleanColumns(exportMode), buildCleanExportRows(result));
   downloadTextFile("clean.csv", csv);
 }
 

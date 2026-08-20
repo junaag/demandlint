@@ -1,6 +1,7 @@
 import { suggestColumnMapping } from "../../core/mapping/suggestColumnMapping";
+import { isEmailField } from "../../core/contactPoints";
 
-const REQUIRED_LEAD_FIELDS = new Set(["firstName", "lastName", "email", "company"]);
+const REQUIRED_NON_EMAIL_FIELDS = new Set(["firstName", "lastName", "company"]);
 
 export interface LeadTableEvidence {
   recognizedFieldCount: number;
@@ -27,7 +28,9 @@ export function evaluateLeadTableColumns(columns: readonly string[]): LeadTableE
 
   return {
     recognizedFieldCount: recognizedFields.size,
-    requiredFieldCount: [...recognizedFields].filter((field) => REQUIRED_LEAD_FIELDS.has(field)).length,
+    requiredFieldCount:
+      [...recognizedFields].filter((field) => REQUIRED_NON_EMAIL_FIELDS.has(field)).length
+      + ([...recognizedFields].some(isEmailField) ? 1 : 0),
     mappingScore:
       plan.autoMappedCount * 5
       + plan.reviewCount * 2

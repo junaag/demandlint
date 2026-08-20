@@ -37,6 +37,10 @@ Framework-independent TypeScript containing:
 
 The current canonical fields remain the standard DemandLint B2B lead schema. Records also expose `customFields` as an extension point so future CRM-specific fields do not require adding dozens of properties to the standard schema.
 
+V0.1.3 models contact coordinates without breaking the original schema. `email` and `phone`
+remain the selected primary values, while typed fields and contact-point collections retain
+professional/secondary/personal emails and mobile/direct/switchboard phones with source evidence.
+
 ### Application
 
 Owns use cases and product workflow contracts:
@@ -68,6 +72,10 @@ The composition layer is the only place that wires application use cases to conc
 ### UI
 
 React components render state and invoke application/composition operations. UI components must not contain data-quality rules, CRM-specific logic or persistence logic.
+
+Contact preferences use the same boundary: the UI calls the composition layer, which wires a
+`ContactPreferenceRepository` port to browser storage. A future authenticated repository can
+replace that adapter without changing contact selection or normalization rules.
 
 ## Import session model
 

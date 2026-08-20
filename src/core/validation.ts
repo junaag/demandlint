@@ -65,7 +65,30 @@ export function validateLead(
     }
   }
 
-  if (lead.email !== undefined) {
+  const invalidEmailPoints = lead.emails?.filter((email) => !email.valid) ?? [];
+  for (const email of invalidEmailPoints) {
+    const isOnlyAvailableEmail = !lead.emails?.some((candidate) => candidate.valid);
+    issues.push({
+      id: `${lead.recordId}:email:${email.sourceColumns.join("+")}:invalid`,
+      ...issueBase(lead),
+      field: email.kind === "professional"
+        ? "emailProfessional"
+        : email.kind === "secondary"
+          ? "emailSecondary"
+          : email.kind === "personal"
+            ? "emailPersonal"
+            : "email",
+      type: "invalid",
+      severity: isOnlyAvailableEmail ? "error" : "warning",
+      message: isOnlyAvailableEmail
+        ? "No valid email is available"
+        : "Invalid alternate email was not selected",
+      originalValue: email.rawValue,
+    });
+  }
+
+  const primaryEmailPoint = lead.emails?.find((email) => email.value === lead.email);
+  if (lead.email !== undefined && (primaryEmailPoint?.valid ?? true)) {
     if (!isValidEmail(lead.email)) {
       issues.push({
         id: `${lead.recordId}:email:invalid`,
@@ -87,6 +110,28 @@ export function validateLead(
         originalValue: lead.email,
       });
     }
+  }
+
+  for (const phone of lead.phones ?? []) {
+    if (phone.validity === "valid") continue;
+    const field: CanonicalField = phone.kind === "mobile"
+      ? "phoneMobile"
+      : phone.kind === "direct"
+        ? "phoneDirect"
+        : phone.kind === "standard"
+          ? "phoneStandard"
+          : "phone";
+    issues.push({
+      id: `${lead.recordId}:phone:${phone.sourceColumns.join("+")}:${phone.validity}`,
+      ...issueBase(lead),
+      field,
+      type: "invalid",
+      severity: "warning",
+      message: phone.validity === "ambiguous"
+        ? "Phone country is missing or unsupported; E.164 conversion needs review"
+        : "Phone number could not be validated as E.164",
+      originalValue: phone.rawValue,
+    });
   }
 
   return issues;

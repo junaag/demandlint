@@ -1,9 +1,11 @@
 import type {
   CanonicalField,
   ColumnMapping,
+  ContactPreferences,
   DatasetSource,
   ProcessedDataset,
 } from "../core/domain";
+import { isEmailField } from "../core/contactPoints";
 import { processDataset } from "../core/processDataset";
 import type { ParsedTable } from "./import/domain";
 
@@ -29,9 +31,12 @@ export function validateMapping(
     .map((sourceColumn) => mapping[sourceColumn])
     .filter((field): field is CanonicalField => field !== undefined && field !== "ignore");
 
-  const missingRequiredFields = REQUIRED_IMPORT_FIELDS.filter(
-    (requiredField) => !selectedTargets.includes(requiredField),
-  );
+  const missingRequiredFields = REQUIRED_IMPORT_FIELDS.filter((requiredField) => {
+    if (requiredField === "email") {
+      return !selectedTargets.some(isEmailField);
+    }
+    return !selectedTargets.includes(requiredField);
+  });
 
   const counts = new Map<CanonicalField, number>();
   for (const target of selectedTargets) {
@@ -75,6 +80,7 @@ export function analyzeParsedTable(
   table: ParsedTable,
   mapping: ColumnMapping,
   sourceId?: string,
+  contactPreferences: Partial<ContactPreferences> = {},
 ): ProcessedDataset {
   const validation = validateMapping(table, mapping);
   if (!validation.valid) {
@@ -87,6 +93,7 @@ export function analyzeParsedTable(
     {
       requiredFields: [...REQUIRED_IMPORT_FIELDS],
       personalEmailPolicy: "warning",
+      contactPreferences,
     },
     datasetSourceForTable(table, sourceId),
   );

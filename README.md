@@ -21,11 +21,13 @@ The first module focuses on **lead import quality**:
 
 1. Upload CSV/XLSX (the best lead worksheet is selected automatically in multi-sheet workbooks)
 2. Confirm the worksheet when relevant, then detect and map columns
-3. Normalize values
-4. Validate required fields and email quality
-5. Detect duplicates
-6. Review Ready / Review / Blocked rows
-7. Export `clean.csv` and `review.csv`
+3. Classify multiple emails and phones by role
+4. Select the best valid contact values using saved local priorities
+5. Normalize phone numbers to Salesforce-compatible E.164 values
+6. Validate required fields and contact quality
+7. Detect duplicates
+8. Review Ready / Review / Blocked rows
+9. Export `clean.csv` and `review.csv`, with primary-only or complete contact fields
 
 Column recognition currently includes common EN / FR / ES / PT lead-export headers.
 
@@ -69,6 +71,7 @@ Completed:
 - V0.1.0 — GitHub Pages deployment and real-user test protocol
 - V0.1.1 — architecture hardening for saved mappings, multi-source imports, organizations and CRM connectors
 - V0.1.2 — automatic lead-sheet detection and manual worksheet selection for multi-sheet XLSX files
+- V0.1.3 — typed multi-email/multi-phone handling, configurable priorities, E.164 normalization and complete contact export
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

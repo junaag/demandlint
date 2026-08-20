@@ -64,6 +64,15 @@ describe("application analysis bridge", () => {
     expect(validation.missingRequiredFields).toEqual(["company"]);
   });
 
+  it("accepts any typed email role as the required primary-email source", () => {
+    const mapping: ColumnMapping = {
+      ...validMapping,
+      "Correo electrónico": "emailProfessional",
+    };
+
+    expect(validateMapping(table, mapping).valid).toBe(true);
+  });
+
   it("rejects multiple source columns mapped to the same target", () => {
     const mapping: ColumnMapping = {
       ...validMapping,

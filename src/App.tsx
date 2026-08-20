@@ -4,19 +4,28 @@ import {
   updateImportSourceMapping,
   validateMapping,
   type CanonicalField,
+  type ContactPreferences,
   type ImportSession,
 } from "./application/public";
 import { createBrowserImportSession } from "./composition/browserImport";
 import { DataHealthReview } from "./components/DataHealthReview";
+import { ContactPreferencesPanel } from "./components/ContactPreferencesPanel";
 import { FileSummary } from "./components/FileSummary";
 import { MappingPanel } from "./components/MappingPanel";
 import { UploadPanel } from "./components/UploadPanel";
+import {
+  loadBrowserContactPreferences,
+  saveBrowserContactPreferences,
+} from "./composition/browserContactPreferences";
 
 export default function App() {
   const [session, setSession] = useState<ImportSession | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [contactPreferences, setContactPreferences] = useState<ContactPreferences>(
+    loadBrowserContactPreferences,
+  );
 
   const source = session?.sources[0];
   const table = source?.table;
@@ -73,11 +82,19 @@ export default function App() {
     setError(null);
   }
 
+  function updateContactPreferences(preferences: ContactPreferences) {
+    saveBrowserContactPreferences(preferences);
+    setContactPreferences(preferences);
+    if (session && source?.result) {
+      setSession(updateImportSourceMapping(session, source.id, source.mapping));
+    }
+  }
+
   function runAnalysis() {
     if (!session || !source || !validation?.valid) return;
 
     try {
-      setSession(analyzeImportSource(session, source.id));
+      setSession(analyzeImportSource(session, source.id, contactPreferences));
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Analysis failed.");
@@ -131,6 +148,10 @@ export default function App() {
               mapping={source.mapping}
               onChange={updateMapping}
             />
+            <ContactPreferencesPanel
+              preferences={contactPreferences}
+              onChange={updateContactPreferences}
+            />
 
             <section className={`validation-bar ${validation?.valid ? "valid" : "invalid"}`}>
               <div>
@@ -151,13 +172,15 @@ export default function App() {
               </button>
             </section>
 
-            {result && <DataHealthReview result={result} />}
+            {result && (
+              <DataHealthReview result={result} contactPreferences={contactPreferences} />
+            )}
           </>
         )}
       </main>
 
       <footer>
-        DemandLint V0.1.2 · Local-first processing · architecture ready for saved mappings and connectors
+        DemandLint V0.1.3 · Local-first processing · contact preferences saved on this device
       </footer>
     </div>
   );
