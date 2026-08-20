@@ -6,6 +6,7 @@ import {
   type QualityStatus,
 } from "../application/qualityReview";
 import type {
+  ContactPreferences,
   DataIssue,
   IssueType,
   ProcessedDataset,
@@ -15,6 +16,7 @@ import "./DataHealthReview.css";
 
 interface DataHealthReviewProps {
   result: ProcessedDataset;
+  contactPreferences: ContactPreferences;
 }
 
 type StatusFilter = QualityStatus | "all";
@@ -63,7 +65,7 @@ function IssueEvidence({ issue }: { issue: DataIssue }) {
   );
 }
 
-export function DataHealthReview({ result }: DataHealthReviewProps) {
+export function DataHealthReview({ result, contactPreferences }: DataHealthReviewProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [issueFilter, setIssueFilter] = useState<IssueFilter>("all");
 
@@ -158,6 +160,7 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
                   <div className="contact-summary">
                     <strong>{name}</strong>
                     <span>{row.lead.email ?? "No email"}</span>
+                    <span>{row.lead.phone ?? "No phone"}</span>
                   </div>
                   <div className="company-summary">
                     <strong>{row.lead.company ?? "No company"}</strong>
@@ -190,7 +193,7 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
           <button
             className="button primary"
             type="button"
-            onClick={() => downloadCleanCsv(result)}
+            onClick={() => downloadCleanCsv(result, contactPreferences.exportMode)}
             disabled={result.stats.readyRows === 0}
           >
             Download clean.csv <span>{result.stats.readyRows}</span>

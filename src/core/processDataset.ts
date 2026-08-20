@@ -66,7 +66,14 @@ export function processDataset(
 
   rows.forEach((row, index) => {
     const sourceRow = headerRowNumber + index + 1;
-    const normalized = normalizeRow(row, mapping, sourceRow, config.defaults, source);
+    const normalized = normalizeRow(
+      row,
+      mapping,
+      sourceRow,
+      config.defaults,
+      source,
+      config.contactPreferences,
+    );
     leads.push(normalized.lead);
     issues.push(...normalized.issues);
     issues.push(...strategies.validate(normalized.lead, config));

@@ -19,7 +19,7 @@ describe("deterministic column mapping", () => {
       "Prénom": "firstName",
       SURNAME: "lastName",
       Organisation: "company",
-      "Business Email": "email",
+      "Business Email": "emailProfessional",
       "Job Role": "jobTitle",
       Téléphone: "phone",
       Pays: "country",
@@ -79,9 +79,9 @@ describe("deterministic column mapping", () => {
       "Primeiro nome": "firstName",
       Apelido: "lastName",
       "Nome da empresa": "company",
-      "Email profissional": "email",
+      "Email profissional": "emailProfessional",
       Função: "jobTitle",
-      Telemóvel: "phone",
+      Telemóvel: "phoneMobile",
       País: "country",
       "Fonte do lead": "leadSource",
       "Estado do membro da campanha": "campaignMemberStatus",
@@ -111,7 +111,7 @@ describe("deterministic column mapping", () => {
       decision: "review",
     });
     expect(suggestion?.candidates[0]).toMatchObject({
-      field: "email",
+      field: "emailProfessional",
       confidence: "medium",
       reason: "alias-contained",
     });
@@ -142,12 +142,14 @@ describe("deterministic column mapping", () => {
     ]);
   });
 
-  it("marks duplicate high-confidence target claims as ambiguous", () => {
+  it("keeps generic and professional emails as distinct contact roles", () => {
     const plan = suggestColumnMapping(["Email", "Business Email"]);
 
-    expect(plan.autoMapping).toEqual({});
-    expect(plan.ambiguousCount).toBe(2);
-    expect(plan.suggestions.every((suggestion) => suggestion.decision === "ambiguous")).toBe(true);
+    expect(plan.autoMapping).toEqual({
+      Email: "email",
+      "Business Email": "emailProfessional",
+    });
+    expect(plan.ambiguousCount).toBe(0);
   });
 
   it("leaves unknown columns unmapped", () => {
@@ -159,5 +161,26 @@ describe("deterministic column mapping", () => {
     });
     expect(plan.unmappedCount).toBe(1);
     expect(plan.autoMapping).toEqual({});
+  });
+
+  it("auto-maps typed phone and email columns without collisions", () => {
+    const plan = suggestColumnMapping([
+      "Email professionnel",
+      "Email secondaire",
+      "Email personnel",
+      "Standard",
+      "Ligne Directe",
+      "Mobile",
+    ]);
+
+    expect(plan.autoMapping).toEqual({
+      "Email professionnel": "emailProfessional",
+      "Email secondaire": "emailSecondary",
+      "Email personnel": "emailPersonal",
+      Standard: "phoneStandard",
+      "Ligne Directe": "phoneDirect",
+      Mobile: "phoneMobile",
+    });
+    expect(plan.ambiguousCount).toBe(0);
   });
 });

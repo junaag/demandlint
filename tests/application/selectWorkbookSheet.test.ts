@@ -41,4 +41,15 @@ describe("workbook sheet selection", () => {
 
     expect(selected).toBe(1);
   });
+
+  it("accepts a typed professional email as the required email evidence", () => {
+    const evidence = evaluateLeadTableColumns([
+      "Company",
+      "First Name",
+      "Last Name",
+      "Business Email",
+    ]);
+
+    expect(evidence.requiredFieldCount).toBe(4);
+  });
 });

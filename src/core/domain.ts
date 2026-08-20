@@ -2,12 +2,49 @@ export type CanonicalField =
   | "firstName"
   | "lastName"
   | "email"
+  | "emailProfessional"
+  | "emailSecondary"
+  | "emailPersonal"
   | "company"
   | "jobTitle"
   | "phone"
+  | "phoneMobile"
+  | "phoneDirect"
+  | "phoneStandard"
   | "country"
   | "leadSource"
   | "campaignMemberStatus";
+
+export type EmailKind = "professional" | "secondary" | "personal" | "other";
+export type PhoneKind = "mobile" | "direct" | "standard" | "other";
+export type PhoneValidity = "valid" | "possible" | "invalid" | "ambiguous";
+
+export interface EmailContactPoint {
+  kind: EmailKind;
+  rawValue: string;
+  value: string;
+  valid: boolean;
+  sourceColumns: string[];
+}
+
+export interface PhoneContactPoint {
+  kind: PhoneKind;
+  rawValue: string;
+  e164?: string | undefined;
+  extension?: string | undefined;
+  countryCode?: string | undefined;
+  validity: PhoneValidity;
+  sourceColumns: string[];
+}
+
+export type ContactExportMode = "primary" | "all";
+
+export interface ContactPreferences {
+  emailPriority: EmailKind[];
+  phonePriority: PhoneKind[];
+  defaultPhoneCountry: string;
+  exportMode: ContactExportMode;
+}
 
 export type RawRow = Record<string, unknown>;
 
@@ -39,10 +76,20 @@ export interface CanonicalLead {
   provenance: RecordProvenance;
   firstName?: string;
   lastName?: string;
+  /** Best available email according to the active contact preferences. */
   email?: string;
+  emailProfessional?: string;
+  emailSecondary?: string;
+  emailPersonal?: string;
+  emails?: EmailContactPoint[];
   company?: string;
   jobTitle?: string;
+  /** Best available phone according to the active contact preferences. */
   phone?: string;
+  phoneMobile?: string;
+  phoneDirect?: string;
+  phoneStandard?: string;
+  phones?: PhoneContactPoint[];
   country?: string;
   leadSource?: string;
   campaignMemberStatus?: string;
@@ -79,6 +126,7 @@ export type PersonalEmailPolicy = "allow" | "warning" | "block";
 export interface ProcessingConfig {
   requiredFields: CanonicalField[];
   personalEmailPolicy: PersonalEmailPolicy;
+  contactPreferences?: Partial<ContactPreferences>;
   defaults?: Partial<Omit<CanonicalLead, "recordId" | "provenance" | "sourceRow" | "customFields">>;
 }
 

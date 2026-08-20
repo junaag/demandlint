@@ -1,10 +1,15 @@
 export type {
   CanonicalField,
   ColumnMapping,
+  ContactExportMode,
+  ContactPreferences,
   DataIssue,
+  EmailKind,
   IssueType,
   ProcessedDataset,
+  PhoneKind,
 } from "../core/domain";
+export { DEFAULT_CONTACT_PREFERENCES } from "../core/contactPoints";
 export type {
   MappingConfidence,
   MappingDecision,

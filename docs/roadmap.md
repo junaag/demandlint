@@ -75,6 +75,19 @@ Prepare the MVP for long-term product expansion without changing the user promis
 - reset mapping and analysis cleanly after a worksheet switch;
 - cover multi-sheet ingestion with regression tests.
 
+## V0.1.3 — Contact Data Intelligence
+
+- recognize professional, secondary and personal email columns;
+- recognize mobile, direct-line and switchboard phone columns;
+- retain every distinct contact value and its source columns;
+- derive backward-compatible primary `email` and `phone` values;
+- select the first valid value using configurable deterministic priorities;
+- normalize supported national phone formats to Salesforce-compatible E.164;
+- handle numeric Excel phone cells and separate extensions;
+- persist contact preferences locally behind an application repository port;
+- export primary-only or complete typed contact fields;
+- flag invalid alternatives without discarding valid fallbacks.
+
 ## Next: validation-driven releases
 
 ### Product feedback / UX hardening
@@ -88,6 +101,7 @@ Use real event lead files and capture defects before expanding scope. Add browse
 - organization memberships and roles;
 - persistent source/destination mapping templates;
 - team-level recipes.
+- synchronize the local contact preferences introduced in V0.1.3 with the authenticated user or organization.
 
 ### Multi-source imports
 
