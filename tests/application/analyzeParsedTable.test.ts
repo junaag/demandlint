@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ParsedTable } from "../../src/adapters/table/domain";
+import type { ParsedTable } from "../../src/application/import/domain";
 import {
   analyzeParsedTable,
   validateMapping,
@@ -29,6 +29,7 @@ const table: ParsedTable = {
     sourceType: "csv",
     rowCount: 2,
     columnCount: 5,
+    headerRowNumber: 1,
     delimiter: ",",
   },
   warnings: [],
@@ -74,13 +75,21 @@ describe("application analysis bridge", () => {
     expect(validation.duplicateTargetFields).toEqual(["company"]);
   });
 
-  it("runs the existing Clean Core after mapping validation", () => {
-    const result = analyzeParsedTable(table, validMapping);
+  it("runs the Clean Core with stable source provenance", () => {
+    const result = analyzeParsedTable(table, validMapping, "source:iberia");
 
     expect(result.stats.totalRows).toBe(2);
     expect(result.stats.readyRows).toBe(1);
     expect(result.stats.reviewRows).toBe(1);
     expect(result.stats.blockedRows).toBe(0);
-    expect(result.leads[0]?.email).toBe("ana@acme.com");
+    expect(result.leads[0]).toMatchObject({
+      email: "ana@acme.com",
+      recordId: "source:iberia:2",
+      provenance: {
+        sourceId: "source:iberia",
+        sourceName: "iberia-leads.csv",
+        rowNumber: 2,
+      },
+    });
   });
 });
