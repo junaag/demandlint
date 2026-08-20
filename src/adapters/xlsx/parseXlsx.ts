@@ -98,6 +98,7 @@ export async function parseXlsxBytes(bytes: Uint8Array, fileName = "upload.xlsx"
       sourceType: "xlsx",
       rowCount: rows.length,
       columnCount: headerColumns.length,
+      headerRowNumber: header.index + 1,
       sheetName: sheet.sheet,
     },
     warnings: [],

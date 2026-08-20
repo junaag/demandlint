@@ -1,130 +1,65 @@
-import { useMemo, useState, type ChangeEvent, type DragEvent } from "react";
-import { analyzeParsedTable, validateMapping } from "./application/analyzeParsedTable";
-import { readBrowserFile } from "./adapters/browser/readBrowserFile";
-import { parseTableFile } from "./adapters/table/parseTableFile";
-import type { ParsedTable } from "./adapters/table/domain";
+import { useMemo, useState } from "react";
+import {
+  analyzeImportSource,
+  updateImportSourceMapping,
+  validateMapping,
+  type CanonicalField,
+  type ImportSession,
+} from "./application/public";
+import { createBrowserImportSession } from "./composition/browserImport";
 import { DataHealthReview } from "./components/DataHealthReview";
-import type { CanonicalField, ColumnMapping, ProcessedDataset } from "./core/domain";
-import type { MappingPlan, MappingConfidence, MappingDecision } from "./core/mapping/domain";
-import { suggestColumnMapping } from "./core/mapping/suggestColumnMapping";
-
-const FIELD_OPTIONS: { value: CanonicalField; label: string }[] = [
-  { value: "firstName", label: "First Name" },
-  { value: "lastName", label: "Last Name" },
-  { value: "email", label: "Email" },
-  { value: "company", label: "Company" },
-  { value: "jobTitle", label: "Job Title" },
-  { value: "phone", label: "Phone" },
-  { value: "country", label: "Country" },
-  { value: "leadSource", label: "Lead Source" },
-  { value: "campaignMemberStatus", label: "Campaign Member Status" },
-];
-
-const FIELD_LABELS = Object.fromEntries(
-  FIELD_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<CanonicalField, string>;
-
-function decisionLabel(decision: MappingDecision): string {
-  if (decision === "auto") return "Auto mapped";
-  if (decision === "review") return "Review";
-  if (decision === "ambiguous") return "Ambiguous";
-  return "No match";
-}
-
-function confidenceLabel(confidence?: MappingConfidence): string {
-  if (!confidence) return "Unknown";
-  return `${confidence[0]?.toUpperCase() ?? ""}${confidence.slice(1)}`;
-}
-
-function initialMapping(plan: MappingPlan): ColumnMapping {
-  const mapping: ColumnMapping = {};
-  for (const suggestion of plan.suggestions) {
-    mapping[suggestion.sourceColumn] =
-      suggestion.decision === "auto" && suggestion.selectedField
-        ? suggestion.selectedField
-        : "ignore";
-  }
-  return mapping;
-}
-
-function sampleValue(table: ParsedTable, sourceColumn: string): string {
-  for (const row of table.rows.slice(0, 6)) {
-    const value = row[sourceColumn];
-    if (value !== null && value !== undefined && String(value).trim().length > 0) {
-      const text = String(value);
-      return text.length > 48 ? `${text.slice(0, 45)}…` : text;
-    }
-  }
-  return "—";
-}
+import { FileSummary } from "./components/FileSummary";
+import { MappingPanel } from "./components/MappingPanel";
+import { UploadPanel } from "./components/UploadPanel";
 
 export default function App() {
-  const [table, setTable] = useState<ParsedTable | null>(null);
-  const [plan, setPlan] = useState<MappingPlan | null>(null);
-  const [mapping, setMapping] = useState<ColumnMapping>({});
-  const [result, setResult] = useState<ProcessedDataset | null>(null);
+  const [session, setSession] = useState<ImportSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
+
+  const source = session?.sources[0];
+  const table = source?.table;
+  const result = source?.result;
 
   const validation = useMemo(
-    () => (table ? validateMapping(table, mapping) : null),
-    [table, mapping],
+    () => (source ? validateMapping(source.table, source.mapping) : null),
+    [source],
   );
 
   async function processFile(file: File) {
     setBusy(true);
     setError(null);
-    setResult(null);
 
     try {
-      const localFile = await readBrowserFile(file);
-      const parsedTable = await parseTableFile(localFile);
-      const mappingPlan = suggestColumnMapping(parsedTable.columns);
-
-      setTable(parsedTable);
-      setPlan(mappingPlan);
-      setMapping(initialMapping(mappingPlan));
+      setSession(await createBrowserImportSession(file));
     } catch (caught) {
-      setTable(null);
-      setPlan(null);
-      setMapping({});
+      setSession(null);
       setError(caught instanceof Error ? caught.message : "The file could not be read.");
     } finally {
       setBusy(false);
     }
   }
 
-  function handleFileInput(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
-    if (file) void processFile(file);
-    event.currentTarget.value = "";
-  }
-
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setDragActive(false);
-    const file = event.dataTransfer.files?.[0];
-    if (file) void processFile(file);
-  }
-
   function updateMapping(sourceColumn: string, value: CanonicalField | "ignore") {
-    setMapping((current) => ({ ...current, [sourceColumn]: value }));
-    setResult(null);
+    if (!session || !source) return;
+    setSession(
+      updateImportSourceMapping(session, source.id, {
+        ...source.mapping,
+        [sourceColumn]: value,
+      }),
+    );
   }
 
   function reset() {
-    setTable(null);
-    setPlan(null);
-    setMapping({});
-    setResult(null);
+    setSession(null);
     setError(null);
   }
 
   function runAnalysis() {
-    if (!table || !validation?.valid) return;
+    if (!session || !source || !validation?.valid) return;
+
     try {
-      setResult(analyzeParsedTable(table, mapping));
+      setSession(analyzeImportSource(session, source.id));
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Analysis failed.");
@@ -162,113 +97,17 @@ export default function App() {
 
         {error && <div className="alert error-alert" role="alert">{error}</div>}
 
-        {!table ? (
-          <section className="panel upload-panel">
-            <div
-              className={`dropzone ${dragActive ? "drag-active" : ""}`}
-              onDragEnter={(event) => {
-                event.preventDefault();
-                setDragActive(true);
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDragLeave={() => setDragActive(false)}
-              onDrop={handleDrop}
-            >
-              <div className="upload-icon" aria-hidden="true">↑</div>
-              <h2>{busy ? "Reading your file…" : "Drop your lead file here"}</h2>
-              <p>CSV or XLSX · your lead file stays on this device and is never uploaded or stored by DemandLint</p>
-              <label className="button primary" htmlFor="lead-file-input">
-                {busy ? "Processing…" : "Choose file"}
-              </label>
-              <input
-                id="lead-file-input"
-                className="visually-hidden"
-                type="file"
-                accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                onChange={handleFileInput}
-                disabled={busy}
-              />
-            </div>
-          </section>
+        {!source || !table ? (
+          <UploadPanel busy={busy} onFile={(file) => void processFile(file)} />
         ) : (
           <>
-            <section className="panel file-summary">
-              <div>
-                <p className="section-label">SOURCE FILE</p>
-                <h2>{table.metadata.fileName}</h2>
-              </div>
-              <div className="metadata-grid">
-                <div><strong>{table.metadata.rowCount}</strong><span>Rows</span></div>
-                <div><strong>{table.metadata.columnCount}</strong><span>Columns</span></div>
-                <div><strong>{table.metadata.sourceType.toUpperCase()}</strong><span>Format</span></div>
-                <div>
-                  <strong>{table.metadata.sheetName ?? table.metadata.delimiter ?? "—"}</strong>
-                  <span>{table.metadata.sheetName ? "Sheet" : "Delimiter"}</span>
-                </div>
-              </div>
-              <button className="button ghost" type="button" onClick={reset}>Use another file</button>
-            </section>
-
-            <section className="panel mapping-panel">
-              <div className="section-heading">
-                <div>
-                  <p className="section-label">FIELD MAPPING</p>
-                  <h2>Confirm how your columns should be interpreted</h2>
-                  <p>Only unique high-confidence matches are selected automatically.</p>
-                </div>
-                {plan && (
-                  <div className="mapping-counts" aria-label="Mapping summary">
-                    <span><b>{plan.autoMappedCount}</b> auto</span>
-                    <span><b>{plan.reviewCount}</b> review</span>
-                    <span><b>{plan.ambiguousCount}</b> ambiguous</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="mapping-table" role="table" aria-label="Column mappings">
-                <div className="mapping-row mapping-header" role="row">
-                  <span>Source column</span>
-                  <span>Sample</span>
-                  <span>Suggestion</span>
-                  <span>Map to</span>
-                </div>
-                {plan?.suggestions.map((suggestion) => {
-                  const topCandidate = suggestion.candidates[0];
-                  return (
-                    <div className="mapping-row" role="row" key={suggestion.sourceColumn}>
-                      <div className="source-cell">
-                        <strong>{suggestion.sourceColumn}</strong>
-                        <span className={`decision decision-${suggestion.decision}`}>
-                          {decisionLabel(suggestion.decision)}
-                        </span>
-                      </div>
-                      <div className="sample-cell" title={sampleValue(table, suggestion.sourceColumn)}>
-                        {sampleValue(table, suggestion.sourceColumn)}
-                      </div>
-                      <div className="suggestion-cell">
-                        <strong>{topCandidate ? FIELD_LABELS[topCandidate.field] : "No suggestion"}</strong>
-                        <span>{confidenceLabel(topCandidate?.confidence)} confidence</span>
-                      </div>
-                      <select
-                        aria-label={`Map ${suggestion.sourceColumn}`}
-                        value={mapping[suggestion.sourceColumn] ?? "ignore"}
-                        onChange={(event) =>
-                          updateMapping(
-                            suggestion.sourceColumn,
-                            event.target.value as CanonicalField | "ignore",
-                          )
-                        }
-                      >
-                        <option value="ignore">Ignore column</option>
-                        {FIELD_OPTIONS.map((field) => (
-                          <option key={field.value} value={field.value}>{field.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+            <FileSummary table={table} onReset={reset} />
+            <MappingPanel
+              table={table}
+              plan={source.mappingPlan}
+              mapping={source.mapping}
+              onChange={updateMapping}
+            />
 
             <section className={`validation-bar ${validation?.valid ? "valid" : "invalid"}`}>
               <div>
@@ -295,7 +134,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.1.0 · Local-first by design · EN / FR / ES / PT column recognition
+        DemandLint V0.1.1 · Local-first processing · architecture ready for saved mappings and connectors
       </footer>
     </div>
   );

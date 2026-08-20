@@ -38,10 +38,15 @@ const rows: RawRow[] = [
 ];
 
 function result() {
-  return processDataset(rows, mapping, {
-    requiredFields: ["firstName", "lastName", "email", "company"],
-    personalEmailPolicy: "warning",
-  });
+  return processDataset(
+    rows,
+    mapping,
+    {
+      requiredFields: ["firstName", "lastName", "email", "company"],
+      personalEmailPolicy: "warning",
+    },
+    { id: "source:event", name: "event.csv", sourceType: "csv", headerRowNumber: 1 },
+  );
 }
 
 describe("quality review", () => {
@@ -78,13 +83,15 @@ describe("quality review", () => {
     });
   });
 
-  it("preserves duplicate and blocked rows in review export with evidence", () => {
+  it("preserves duplicate and blocked rows in review export with source evidence", () => {
     const review = buildReviewExportRows(result());
 
     expect(review).toHaveLength(2);
     expect(review[0]).toMatchObject({
       email: "ana@acme.com",
       _quality_status: "review",
+      _record_id: "source:event:3",
+      _source_name: "event.csv",
       _source_row: "3",
     });
     expect(review[0]?._quality_issue.toLowerCase()).toContain("duplicate");
@@ -92,6 +99,8 @@ describe("quality review", () => {
     expect(review[1]).toMatchObject({
       email: "",
       _quality_status: "blocked",
+      _record_id: "source:event:4",
+      _source_name: "event.csv",
       _source_row: "4",
     });
     expect(review[1]?._quality_issue.toLowerCase()).toContain("email");
