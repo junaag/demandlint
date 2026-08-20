@@ -15,9 +15,9 @@ The first module focuses on **lead import quality**:
 - **Deterministic by default**: AI is optional and never required for core cleaning/validation.
 - **Explainable**: every warning, error and automatic fix is visible.
 - **No silent data loss**: rejected or conflicting rows remain exportable for review.
-- **Small MVP**: solve import quality first; do not become a CRM or event platform.
+- **Platform-ready boundaries**: auth, persistence and CRM providers sit outside the Clean Core.
 
-## V0.1 workflow
+## Current workflow
 
 1. Upload CSV/XLSX
 2. Detect and map columns
@@ -35,13 +35,29 @@ Column recognition currently includes common EN / FR / ES / PT lead-export heade
 - TypeScript
 - Vite
 - Vitest
-- browser-only lead processing
+- browser-local lead processing
+- explicit Application / Core / Adapter / Composition boundaries
 - GitHub Actions CI
+- reproducible npm lockfile + `npm ci`
 - GitHub Pages deployment
 
-## Release status
+## Architecture direction
 
-**V0.1.0 is the first user-testable MVP.**
+V0.1.1 prepares DemandLint for future SaaS capabilities without coupling them to the cleaning engine:
+
+- stable record IDs and multi-source provenance;
+- import sessions capable of holding multiple source files;
+- extensible custom-field contracts;
+- separate source and destination mappings;
+- provider-neutral auth and organization ports;
+- persistent mapping-template repository contract;
+- provider-neutral CRM/destination connector contract;
+- replaceable validation and deduplication strategies;
+- automated architecture-boundary tests.
+
+The current public UI remains local-first and single-source. No real authentication, database or CRM credential is introduced by V0.1.1.
+
+## Release status
 
 Completed:
 
@@ -51,6 +67,7 @@ Completed:
 - V0.0.4 — React upload + mapping wizard
 - V0.0.5 — Data Health review + clean/review CSV export
 - V0.1.0 — GitHub Pages deployment and real-user test protocol
+- V0.1.1 — architecture hardening for saved mappings, multi-source imports, organizations and CRM connectors
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 
