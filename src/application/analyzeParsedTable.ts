@@ -1,4 +1,3 @@
-import type { ParsedTable } from "../adapters/table/domain";
 import type {
   CanonicalField,
   ColumnMapping,
@@ -6,6 +5,7 @@ import type {
   ProcessedDataset,
 } from "../core/domain";
 import { processDataset } from "../core/processDataset";
+import type { ParsedTable } from "./import/domain";
 
 export const REQUIRED_IMPORT_FIELDS: readonly CanonicalField[] = [
   "firstName",
