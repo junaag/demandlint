@@ -1,35 +1,43 @@
-import type { CanonicalLead, DataIssue } from "./domain";
+import type { CanonicalLead, DataIssue, RecordId } from "./domain";
 
 export interface DuplicateResult {
+  duplicateRecordIds: Set<RecordId>;
+  /** @deprecated Use duplicateRecordIds for multi-source workflows. */
   duplicateRows: Set<number>;
   issues: DataIssue[];
 }
 
-export function detectDuplicates(leads: CanonicalLead[]): DuplicateResult {
-  const firstRowByEmail = new Map<string, number>();
+export type DuplicateDetectionStrategy = (leads: readonly CanonicalLead[]) => DuplicateResult;
+
+export function detectDuplicates(leads: readonly CanonicalLead[]): DuplicateResult {
+  const firstLeadByEmail = new Map<string, CanonicalLead>();
+  const duplicateRecordIds = new Set<RecordId>();
   const duplicateRows = new Set<number>();
   const issues: DataIssue[] = [];
 
   for (const lead of leads) {
     if (!lead.email) continue;
 
-    const firstRow = firstRowByEmail.get(lead.email);
-    if (firstRow === undefined) {
-      firstRowByEmail.set(lead.email, lead.sourceRow);
+    const firstLead = firstLeadByEmail.get(lead.email);
+    if (!firstLead) {
+      firstLeadByEmail.set(lead.email, lead);
       continue;
     }
 
+    duplicateRecordIds.add(lead.recordId);
     duplicateRows.add(lead.sourceRow);
     issues.push({
-      id: `${lead.sourceRow}:email:duplicate`,
+      id: `${lead.recordId}:email:duplicate`,
+      recordId: lead.recordId,
+      provenance: lead.provenance,
       row: lead.sourceRow,
       field: "email",
       type: "duplicate",
       severity: "warning",
-      message: `Duplicate email; first occurrence is row ${firstRow}`,
+      message: `Duplicate email; first occurrence is ${firstLead.provenance.sourceName} row ${firstLead.provenance.rowNumber}`,
       originalValue: lead.email,
     });
   }
 
-  return { duplicateRows, issues };
+  return { duplicateRecordIds, duplicateRows, issues };
 }
