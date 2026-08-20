@@ -30,7 +30,7 @@ export interface ImportSessionSource {
   table: ParsedTable;
   mappingPlan: MappingPlan;
   mapping: ColumnMapping;
-  result?: ProcessedDataset;
+  result?: ProcessedDataset | undefined;
 }
 
 export interface ImportSession {
