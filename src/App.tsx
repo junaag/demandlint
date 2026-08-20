@@ -14,6 +14,7 @@ import {
 } from "./application/public";
 import {
   addBrowserOrganizationMember,
+  createBrowserAccount,
   createBrowserOrganization,
   listBrowserOrganizationMembers,
   loadBrowserAccountWorkspace,
@@ -35,12 +36,21 @@ import {
 import { AccountGate } from "./components/AccountGate";
 import { DataHealthReview } from "./components/DataHealthReview";
 import { FileSummary } from "./components/FileSummary";
+import { LegalPage } from "./components/LegalPage";
 import { MappingPanel } from "./components/MappingPanel";
 import { MappingTemplatesPanel } from "./components/MappingTemplatesPanel";
 import { UploadPanel } from "./components/UploadPanel";
 import { WorkspaceSettings } from "./components/WorkspaceSettings";
 
 type AppPage = "import" | "settings";
+type PublicRoute = "terms" | "privacy" | null;
+
+function getPublicRoute(): PublicRoute {
+  if (typeof window === "undefined") return null;
+  if (window.location.hash === "#terms") return "terms";
+  if (window.location.hash === "#privacy") return "privacy";
+  return null;
+}
 
 export default function App() {
   const [workspace, setWorkspace] = useState<AccountWorkspace | null>(loadBrowserAccountWorkspace);
@@ -54,6 +64,7 @@ export default function App() {
   );
   const [mappingTemplates, setMappingTemplates] = useState<MappingTemplate[]>([]);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [publicRoute, setPublicRoute] = useState<PublicRoute>(getPublicRoute);
 
   const activeOrganizationId = workspace?.session.activeOrganizationId;
   const source = session?.sources[0];
@@ -64,6 +75,15 @@ export default function App() {
     () => (source ? validateMapping(source.table, source.mapping) : null),
     [source],
   );
+
+  useEffect(() => {
+    function syncPublicRoute() {
+      setPublicRoute(getPublicRoute());
+      setError(null);
+    }
+    window.addEventListener("hashchange", syncPublicRoute);
+    return () => window.removeEventListener("hashchange", syncPublicRoute);
+  }, []);
 
   useEffect(() => {
     if (!activeOrganizationId) {
@@ -82,10 +102,20 @@ export default function App() {
     };
   }, [activeOrganizationId]);
 
-  function signIn(input: CreateAccountInput) {
+  function createAccount(input: CreateAccountInput) {
     setError(null);
     try {
-      setWorkspace(signInBrowserAccount(input));
+      setWorkspace(createBrowserAccount(input));
+      setPage("import");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The account could not be opened.");
+    }
+  }
+
+  function signIn(email: string) {
+    setError(null);
+    try {
+      setWorkspace(signInBrowserAccount(email));
       setPage("import");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The account could not be opened.");
@@ -213,15 +243,23 @@ export default function App() {
     }
   }
 
+  if (publicRoute) {
+    return (
+      <div className="app-shell account-shell legal-shell">
+        <LegalPage kind={publicRoute} />
+      </div>
+    );
+  }
+
   if (!workspace) {
     return (
       <div className="app-shell account-shell">
-        <header className="topbar">
-          <Brand />
-          <div className="privacy-pill">Processed locally · no upload</div>
-        </header>
-        <AccountGate onContinue={signIn} error={error} />
-        <footer>DemandLint V0.2.0 · Local account preview · local-first processing</footer>
+        <AccountGate
+          onCreateAccount={createAccount}
+          onSignIn={signIn}
+          onModeChange={() => setError(null)}
+          error={error}
+        />
       </div>
     );
   }
@@ -339,7 +377,8 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.2.0 · Local account preview · lead files never leave this browser
+        DemandLint V0.2.1 · Local account preview · lead files never leave this browser ·{" "}
+        <a href="#terms">Conditions</a> · <a href="#privacy">Confidentialité</a>
       </footer>
     </div>
   );

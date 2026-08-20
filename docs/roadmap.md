@@ -102,6 +102,16 @@ Prepare the MVP for long-term product expansion without changing the user promis
 This release validates the account and workspace UX on GitHub Pages. It deliberately does not
 claim secure authentication or cross-device synchronization.
 
+## V0.2.1 — Authentication UX
+
+- reduce registration to one professional email field;
+- derive the local preview profile and initial organization from that email;
+- separate account creation from returning-user login;
+- never create an unknown account silently from the login screen;
+- add a clear link between registration and login;
+- redesign the authentication card around Google/Microsoft/organization entry points and a focused email form;
+- publish DemandLint-specific Conditions of Use and Privacy Policy drafts documenting the local-first preview.
+
 ## Next: hosted accounts & validation-driven releases
 
 ### Product feedback / UX hardening

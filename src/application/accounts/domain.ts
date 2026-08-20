@@ -33,8 +33,6 @@ export interface AccountWorkspace {
 
 export interface CreateAccountInput {
   email: string;
-  displayName: string;
-  organizationName: string;
 }
 
 export interface CreateOrganizationInput {

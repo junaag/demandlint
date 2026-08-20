@@ -239,7 +239,7 @@ DemandLint does not silently discard bad data.
 
 The first account workspace is a GitHub Pages-compatible preview:
 
-- a user enters a name and email, but no password is collected or stored;
+- a user enters a professional email, but no password is collected or stored;
 - the normalized email reopens the same local profile on the same browser;
 - organizations, memberships, active organization, contact preferences and mapping templates are
   persisted in browser storage;
@@ -249,6 +249,11 @@ The first account workspace is a GitHub Pages-compatible preview:
 
 The local adapter is not an identity provider and must not be presented as secure authentication.
 Production accounts will replace it with hosted implementations of the existing application ports.
+
+V0.2.1 separates the account-creation and returning-user login use cases. Registration only
+accepts a professional email and derives preview labels from it; login only reopens a user already
+present in the browser repository. This prevents the login screen from silently creating accounts
+and maps cleanly to future hosted `signUp` and `signIn` adapter operations.
 
 ## Current deliberate limitations
 

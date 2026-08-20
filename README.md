@@ -77,6 +77,7 @@ Completed:
 - V0.1.2 — automatic lead-sheet detection and manual worksheet selection for multi-sheet XLSX files
 - V0.1.3 — typed multi-email/multi-phone handling, configurable priorities, E.164 normalization and complete contact export
 - V0.2.0 — local account preview, organization workspaces, role simulation, organization-scoped preferences and saved mappings
+- V0.2.1 — work-email-only registration, separate returning-user login, redesigned authentication UI and legal pages
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

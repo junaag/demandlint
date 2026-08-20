@@ -42,6 +42,31 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function validateEmail(value: string): string {
+  const email = normalizeEmail(value);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Saisissez une adresse e-mail professionnelle valide.");
+  }
+  return email;
+}
+
+function titleCase(value: string): string {
+  return value
+    .split(/[._\-\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function profileNameFromEmail(email: string): string {
+  return titleCase(email.split("@")[0] ?? "") || email;
+}
+
+function organizationNameFromEmail(email: string): string {
+  const domain = email.split("@")[1]?.split(".")[0] ?? "";
+  return `${titleCase(domain) || "Mon"} workspace`;
+}
+
 function stableId(prefix: string, value: string): string {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -67,43 +92,47 @@ export class LocalAccountWorkspaceRepository {
     return this.workspaceFor(database, database.currentUserId);
   }
 
-  signInOrCreate(input: CreateAccountInput): AccountWorkspace {
-    const email = normalizeEmail(input.email);
-    if (!email || !email.includes("@")) throw new Error("Enter a valid email address.");
-    if (!input.displayName.trim()) throw new Error("Enter your name.");
-
+  createAccount(input: CreateAccountInput): AccountWorkspace {
+    const email = validateEmail(input.email);
     const database = this.read();
-    let user = database.users.find((candidate) => candidate.email === email);
-
-    if (!user) {
-      user = {
-        id: stableId("usr", email),
-        email,
-        displayName: input.displayName.trim(),
-      };
-      database.users.push(user);
-    } else if (input.displayName.trim() !== user.displayName) {
-      user.displayName = input.displayName.trim();
+    if (database.users.some((candidate) => candidate.email === email)) {
+      throw new Error("Un compte existe déjà avec cet e-mail. Utilisez la page de connexion.");
     }
 
-    let memberships = database.memberships.filter((item) => item.userId === user.id);
-    if (memberships.length === 0) {
-      const organization: Organization = {
-        id: nextId("org"),
-        name: input.organizationName.trim() || `${user.displayName}'s workspace`,
-      };
-      database.organizations.push(organization);
-      const membership: OrganizationMembership = {
-        userId: user.id,
-        organizationId: organization.id,
-        role: "owner",
-      };
-      database.memberships.push(membership);
-      memberships = [membership];
-      database.activeOrganizationByUser[user.id] = organization.id;
-    }
+    const user: AccountUser = {
+      id: stableId("usr", email),
+      email,
+      displayName: profileNameFromEmail(email),
+    };
+    database.users.push(user);
+
+    const organization: Organization = {
+      id: nextId("org"),
+      name: organizationNameFromEmail(email),
+    };
+    database.organizations.push(organization);
+    const membership: OrganizationMembership = {
+      userId: user.id,
+      organizationId: organization.id,
+      role: "owner",
+    };
+    database.memberships.push(membership);
+    database.activeOrganizationByUser[user.id] = organization.id;
 
     database.currentUserId = user.id;
+    this.write(database);
+    return this.workspaceFor(database, user.id);
+  }
+
+  signIn(emailValue: string): AccountWorkspace {
+    const email = validateEmail(emailValue);
+    const database = this.read();
+    const user = database.users.find((candidate) => candidate.email === email);
+    if (!user) {
+      throw new Error("Aucun compte n’existe avec cet e-mail. Créez d’abord votre compte.");
+    }
+    database.currentUserId = user.id;
+    const memberships = database.memberships.filter((item) => item.userId === user.id);
     if (!database.activeOrganizationByUser[user.id]) {
       database.activeOrganizationByUser[user.id] = memberships[0]?.organizationId ?? "";
     }

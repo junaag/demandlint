@@ -10,8 +10,12 @@ export function loadBrowserAccountWorkspace(): AccountWorkspace | null {
   return localAccountWorkspaceRepository.loadWorkspace();
 }
 
-export function signInBrowserAccount(input: CreateAccountInput): AccountWorkspace {
-  return localAccountWorkspaceRepository.signInOrCreate(input);
+export function createBrowserAccount(input: CreateAccountInput): AccountWorkspace {
+  return localAccountWorkspaceRepository.createAccount(input);
+}
+
+export function signInBrowserAccount(email: string): AccountWorkspace {
+  return localAccountWorkspaceRepository.signIn(email);
 }
 
 export function signOutBrowserAccount(): void {
