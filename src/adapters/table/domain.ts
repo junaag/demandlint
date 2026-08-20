@@ -15,6 +15,7 @@ export interface ParsedTableMetadata {
   sourceType: TableSourceType;
   rowCount: number;
   columnCount: number;
+  headerRowNumber: number;
   delimiter?: string;
   sheetName?: string;
 }
