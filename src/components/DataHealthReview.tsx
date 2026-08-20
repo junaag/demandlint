@@ -1,17 +1,16 @@
 import { useMemo, useState } from "react";
-import { downloadTextFile } from "../adapters/browser/downloadTextFile";
-import { serializeCsv, type CsvColumn } from "../adapters/export/serializeCsv";
 import {
-  buildCleanExportRows,
   buildQualityReview,
-  buildReviewExportRows,
-  CANONICAL_EXPORT_FIELDS,
   countIssueTypes,
   filterQualityRows,
-  REVIEW_EXPORT_COLUMNS,
   type QualityStatus,
 } from "../application/qualityReview";
-import type { DataIssue, IssueType, ProcessedDataset } from "../core/domain";
+import type {
+  DataIssue,
+  IssueType,
+  ProcessedDataset,
+} from "../application/public";
+import { downloadCleanCsv, downloadReviewCsv } from "../composition/browserExport";
 import "./DataHealthReview.css";
 
 interface DataHealthReviewProps {
@@ -28,9 +27,6 @@ const ISSUE_LABELS: Record<IssueType, string> = {
   warning: "Warning",
   normalization: "Normalization",
 };
-
-const CLEAN_COLUMNS: CsvColumn[] = CANONICAL_EXPORT_FIELDS.map((field) => ({ key: field }));
-const REVIEW_COLUMNS: CsvColumn[] = REVIEW_EXPORT_COLUMNS.map((field) => ({ key: field }));
 
 function statusLabel(status: QualityStatus): string {
   if (status === "ready") return "Ready";
@@ -82,18 +78,6 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
     ? 0
     : Math.round((result.stats.readyRows / result.stats.totalRows) * 100);
   const reviewExportCount = result.stats.reviewRows + result.stats.blockedRows;
-
-  function downloadCleanCsv() {
-    const rows = buildCleanExportRows(result);
-    const csv = serializeCsv(CLEAN_COLUMNS, rows);
-    downloadTextFile("clean.csv", csv);
-  }
-
-  function downloadReviewCsv() {
-    const rows = buildReviewExportRows(result);
-    const csv = serializeCsv(REVIEW_COLUMNS, rows);
-    downloadTextFile("review.csv", csv);
-  }
 
   return (
     <section className="data-health" aria-live="polite">
@@ -168,7 +152,7 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
           ) : filteredRows.map((row) => {
             const name = [row.lead.firstName, row.lead.lastName].filter(Boolean).join(" ") || "Unnamed contact";
             return (
-              <article className="quality-row" key={row.lead.sourceRow}>
+              <article className="quality-row" key={row.lead.recordId}>
                 <div className="quality-row-summary">
                   <span className={`status-badge status-${row.status}`}>{statusLabel(row.status)}</span>
                   <div className="contact-summary">
@@ -177,7 +161,7 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
                   </div>
                   <div className="company-summary">
                     <strong>{row.lead.company ?? "No company"}</strong>
-                    <span>Source row {row.lead.sourceRow}</span>
+                    <span>{row.lead.provenance.sourceName} · row {row.lead.provenance.rowNumber}</span>
                   </div>
                 </div>
                 <div className="quality-row-issues">
@@ -199,14 +183,14 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
           <h2>Download CRM-ready data without losing exceptions</h2>
           <p>
             <code>clean.csv</code> contains Ready rows only. <code>review.csv</code> keeps every
-            Review and Blocked row with its status, source row and quality explanation.
+            Review and Blocked row with its source, record identity and quality explanation.
           </p>
         </div>
         <div className="export-actions">
           <button
             className="button primary"
             type="button"
-            onClick={downloadCleanCsv}
+            onClick={() => downloadCleanCsv(result)}
             disabled={result.stats.readyRows === 0}
           >
             Download clean.csv <span>{result.stats.readyRows}</span>
@@ -214,7 +198,7 @@ export function DataHealthReview({ result }: DataHealthReviewProps) {
           <button
             className="button secondary"
             type="button"
-            onClick={downloadReviewCsv}
+            onClick={() => downloadReviewCsv(result)}
             disabled={reviewExportCount === 0}
           >
             Download review.csv <span>{reviewExportCount}</span>
