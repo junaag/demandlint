@@ -15,6 +15,7 @@ export type {
   ImportSessionSource,
   ParsedTable,
   ParsedTableMetadata,
+  WorkbookSheetMetadata,
 } from "./import/domain";
 export {
   addImportSource,
@@ -22,4 +23,8 @@ export {
   createImportSession,
   updateImportSourceMapping,
 } from "./import/session";
+export {
+  evaluateLeadTableColumns,
+  selectBestWorkbookSheetIndex,
+} from "./import/selectWorkbookSheet";
 export { validateMapping } from "./analyzeParsedTable";

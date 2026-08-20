@@ -2,12 +2,19 @@ import { parseCsvBytes } from "../csv/parseCsv";
 import { parseXlsxBytes } from "../xlsx/parseXlsx";
 import { TableParseError, type LocalTableFile, type ParsedTable } from "./domain";
 
+export interface TableParseOptions {
+  sheetName?: string;
+}
+
 function extensionOf(fileName: string): string {
   const lastDot = fileName.lastIndexOf(".");
   return lastDot >= 0 ? fileName.slice(lastDot).toLowerCase() : "";
 }
 
-export async function parseTableFile(file: LocalTableFile): Promise<ParsedTable> {
+export async function parseTableFile(
+  file: LocalTableFile,
+  options: TableParseOptions = {},
+): Promise<ParsedTable> {
   const extension = extensionOf(file.name);
 
   if (extension === ".csv") {
@@ -15,7 +22,7 @@ export async function parseTableFile(file: LocalTableFile): Promise<ParsedTable>
   }
 
   if (extension === ".xlsx") {
-    return parseXlsxBytes(file.bytes, file.name);
+    return parseXlsxBytes(file.bytes, file.name, options);
   }
 
   throw new TableParseError(

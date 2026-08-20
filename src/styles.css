@@ -116,6 +116,10 @@ button, label { -webkit-tap-highlight-color: transparent; }
 
 .file-summary { display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; gap: 24px; align-items: center; padding: 22px 24px; margin-bottom: 16px; }
 .file-summary h2, .mapping-panel h2, .result-panel h2 { margin: 0; font-size: 20px; }
+.file-identity { min-width: 220px; }
+.sheet-selector { display: grid; gap: 5px; max-width: 300px; margin-top: 16px; }
+.sheet-selector > span { color: #58657a; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.sheet-selector small { color: #7b8597; font-size: 11px; }
 .metadata-grid { display: grid; grid-template-columns: repeat(4, minmax(70px, 1fr)); gap: 8px; }
 .metadata-grid div, .result-grid div { display: grid; gap: 2px; min-width: 76px; }
 .metadata-grid strong, .result-grid strong { font-size: 20px; }

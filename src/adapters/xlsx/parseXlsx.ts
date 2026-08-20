@@ -1,6 +1,14 @@
 import readExcelFile from "read-excel-file/universal";
+import {
+  evaluateLeadTableColumns,
+  selectBestWorkbookSheetIndex,
+} from "../../application/import/selectWorkbookSheet";
 import type { RawRow } from "../../core/domain";
-import { TableParseError, type ParsedTable } from "../table/domain";
+import {
+  TableParseError,
+  type ParsedTable,
+  type WorkbookSheetMetadata,
+} from "../table/domain";
 
 interface HeaderColumn {
   index: number;
@@ -9,6 +17,33 @@ interface HeaderColumn {
 
 type SheetCell = string | number | boolean | Date | null;
 type SheetRow = SheetCell[];
+
+interface WorkbookSheet {
+  sheet: string;
+  data: SheetRow[];
+}
+
+export interface XlsxParseOptions {
+  sheetName?: string;
+}
+
+interface HeaderCandidate {
+  index: number;
+  columns: HeaderColumn[];
+  recognizedFieldCount: number;
+  requiredFieldCount: number;
+  mappingScore: number;
+}
+
+interface SheetCandidate {
+  sheet: WorkbookSheet;
+  table?: ParsedTable;
+  summary: WorkbookSheetMetadata;
+  requiredFieldCount: number;
+  mappingScore: number;
+}
+
+const MAX_HEADER_SCAN_ROWS = 50;
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(bytes.byteLength);
@@ -29,6 +64,55 @@ function findHeaderRow(data: SheetRow[]): { index: number; row: SheetRow } | und
   if (index < 0) return undefined;
   const row = data[index];
   return row ? { index, row } : undefined;
+}
+
+function evaluateHeaderRow(row: SheetRow, index: number): HeaderCandidate | undefined {
+  const columns = extractHeaderColumns(row);
+  if (columns.length === 0) return undefined;
+
+  const evidence = evaluateLeadTableColumns(columns.map((column) => column.name));
+
+  return {
+    index,
+    columns,
+    ...evidence,
+  };
+}
+
+function isBetterHeader(candidate: HeaderCandidate, current: HeaderCandidate): boolean {
+  if (candidate.requiredFieldCount !== current.requiredFieldCount) {
+    return candidate.requiredFieldCount > current.requiredFieldCount;
+  }
+  if (candidate.mappingScore !== current.mappingScore) {
+    return candidate.mappingScore > current.mappingScore;
+  }
+  if (candidate.recognizedFieldCount !== current.recognizedFieldCount) {
+    return candidate.recognizedFieldCount > current.recognizedFieldCount;
+  }
+  if (candidate.columns.length !== current.columns.length) {
+    return candidate.columns.length > current.columns.length;
+  }
+  return candidate.index < current.index;
+}
+
+function findBestHeaderRow(data: SheetRow[]): HeaderCandidate | undefined {
+  const first = findHeaderRow(data);
+  if (!first) return undefined;
+
+  const fallback = evaluateHeaderRow(first.row, first.index);
+  if (!fallback) return undefined;
+
+  let bestRecognized: HeaderCandidate | undefined;
+  data.slice(0, MAX_HEADER_SCAN_ROWS).forEach((row, index) => {
+    if (!hasMeaningfulValue(row)) return;
+    const candidate = evaluateHeaderRow(row, index);
+    if (!candidate || candidate.recognizedFieldCount === 0) return;
+    if (!bestRecognized || isBetterHeader(candidate, bestRecognized)) {
+      bestRecognized = candidate;
+    }
+  });
+
+  return bestRecognized ?? fallback;
 }
 
 function extractHeaderColumns(row: SheetRow): HeaderColumn[] {
@@ -57,50 +141,128 @@ function rowToRawRow(row: SheetRow, columns: HeaderColumn[]): RawRow | undefined
   return hasValue ? output : undefined;
 }
 
-export async function parseXlsxBytes(bytes: Uint8Array, fileName = "upload.xlsx"): Promise<ParsedTable> {
+function buildSheetCandidate(sheet: WorkbookSheet, index: number, fileName: string): SheetCandidate {
+  const header = findBestHeaderRow(sheet.data);
+  if (!header) {
+    return {
+      sheet,
+      summary: {
+        name: sheet.sheet,
+        index,
+        rowCount: 0,
+        columnCount: 0,
+        recognizedFieldCount: 0,
+        usable: false,
+      },
+      requiredFieldCount: 0,
+      mappingScore: 0,
+    };
+  }
+
+  const rows = sheet.data
+    .slice(header.index + 1)
+    .map((row) => rowToRawRow(row, header.columns))
+    .filter((row): row is RawRow => row !== undefined);
+  const summary: WorkbookSheetMetadata = {
+    name: sheet.sheet,
+    index,
+    rowCount: rows.length,
+    columnCount: header.columns.length,
+    headerRowNumber: header.index + 1,
+    recognizedFieldCount: header.recognizedFieldCount,
+    usable: true,
+  };
+
+  return {
+    sheet,
+    summary,
+    requiredFieldCount: header.requiredFieldCount,
+    mappingScore: header.mappingScore,
+    table: {
+      columns: header.columns.map((column) => column.name),
+      rows,
+      metadata: {
+        fileName,
+        sourceType: "xlsx",
+        rowCount: rows.length,
+        columnCount: header.columns.length,
+        headerRowNumber: header.index + 1,
+        sheetName: sheet.sheet,
+      },
+      warnings: [],
+    },
+  };
+}
+
+function selectAutomaticSheet(candidates: SheetCandidate[]): SheetCandidate | undefined {
+  const usableCandidates = candidates.filter((candidate) => candidate.table !== undefined);
+  const selectedIndex = selectBestWorkbookSheetIndex(
+    usableCandidates.map((candidate) => ({
+      index: candidate.summary.index,
+      rowCount: candidate.summary.rowCount,
+      columnCount: candidate.summary.columnCount,
+      recognizedFieldCount: candidate.summary.recognizedFieldCount,
+      requiredFieldCount: candidate.requiredFieldCount,
+      mappingScore: candidate.mappingScore,
+    })),
+  );
+  return usableCandidates.find((candidate) => candidate.summary.index === selectedIndex);
+}
+
+export async function parseXlsxBytes(
+  bytes: Uint8Array,
+  fileName = "upload.xlsx",
+  options: XlsxParseOptions = {},
+): Promise<ParsedTable> {
   if (bytes.byteLength === 0) {
     throw new TableParseError("EMPTY_FILE", "XLSX file is empty.");
   }
 
-  let sheets: Awaited<ReturnType<typeof readExcelFile>>;
+  let sheets: WorkbookSheet[];
   try {
-    sheets = await readExcelFile(toArrayBuffer(bytes));
+    sheets = await readExcelFile(toArrayBuffer(bytes)) as WorkbookSheet[];
   } catch (error) {
     throw new TableParseError("INVALID_XLSX", "XLSX file could not be parsed.", { cause: error });
   }
 
-  const sheet = sheets[0];
-  if (!sheet) {
+  if (sheets.length === 0) {
     throw new TableParseError("EMPTY_SHEET", "XLSX workbook does not contain a worksheet.");
   }
 
-  const data = sheet.data as SheetRow[];
-  const header = findHeaderRow(data);
-  if (!header) {
-    throw new TableParseError("NO_HEADER_ROW", "XLSX worksheet does not contain a usable header row.");
+  const candidates = sheets.map((sheet, index) => buildSheetCandidate(sheet, index, fileName));
+  const selected = options.sheetName
+    ? candidates.find((candidate) => candidate.sheet.sheet === options.sheetName)
+    : selectAutomaticSheet(candidates);
+
+  if (options.sheetName && !selected) {
+    throw new TableParseError(
+      "UNKNOWN_SHEET",
+      `XLSX workbook does not contain a worksheet named '${options.sheetName}'.`,
+    );
+  }
+  if (!selected?.table) {
+    throw new TableParseError(
+      "NO_HEADER_ROW",
+      options.sheetName
+        ? `XLSX worksheet '${options.sheetName}' does not contain a usable header row.`
+        : "XLSX workbook does not contain a worksheet with a usable header row.",
+    );
   }
 
-  const headerColumns = extractHeaderColumns(header.row);
-  if (headerColumns.length === 0) {
-    throw new TableParseError("NO_HEADER_ROW", "XLSX worksheet does not contain a usable header row.");
+  const warnings = [...selected.table.warnings];
+  if (!options.sheetName && candidates.length > 1) {
+    warnings.push(
+      `Automatically selected worksheet '${selected.sheet.sheet}' from ${candidates.length} worksheets.`,
+    );
   }
-
-  const rows = data
-    .slice(header.index + 1)
-    .map((row) => rowToRawRow(row, headerColumns))
-    .filter((row): row is RawRow => row !== undefined);
 
   return {
-    columns: headerColumns.map((column) => column.name),
-    rows,
+    ...selected.table,
     metadata: {
-      fileName,
-      sourceType: "xlsx",
-      rowCount: rows.length,
-      columnCount: headerColumns.length,
-      headerRowNumber: header.index + 1,
-      sheetName: sheet.sheet,
+      ...selected.table.metadata,
+      sheetSelection: options.sheetName ? "manual" : "automatic",
+      workbookSheets: candidates.map((candidate) => candidate.summary),
     },
-    warnings: [],
+    warnings,
   };
 }

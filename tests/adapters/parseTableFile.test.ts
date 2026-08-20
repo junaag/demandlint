@@ -32,6 +32,23 @@ describe("table file dispatcher", () => {
     expect(result.metadata.sheetName).toBe("Leads");
   });
 
+  it("forwards a manual worksheet selection to the XLSX adapter", async () => {
+    const buffer = await writeExcelFile(
+      [
+        { data: [["Metric", "Value"], ["Registrations", 42]], sheet: "Summary" },
+        { data: [["First Name", "Email"], ["Alice", "alice@example.com"]], sheet: "Leads" },
+      ],
+    ).toBuffer();
+
+    const result = await parseTableFile(
+      { name: "event.xlsx", bytes: new Uint8Array(buffer) },
+      { sheetName: "Summary" },
+    );
+
+    expect(result.metadata.sheetName).toBe("Summary");
+    expect(result.metadata.sheetSelection).toBe("manual");
+  });
+
   it("rejects unsupported file types explicitly", async () => {
     await expect(
       parseTableFile({
