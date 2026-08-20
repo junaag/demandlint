@@ -51,8 +51,13 @@ import { MappingPanel } from "./components/MappingPanel";
 import { MappingTemplatesPanel } from "./components/MappingTemplatesPanel";
 import { UploadPanel } from "./components/UploadPanel";
 import { WorkspaceSettings } from "./components/WorkspaceSettings";
+import {
+  getWorkspacePage,
+  isWorkspacePage,
+  workspacePageHref,
+  type WorkspacePage,
+} from "./application/workspaceNavigation";
 
-type AppPage = "import" | "settings";
 type PublicRoute = "terms" | "privacy" | null;
 
 function getPublicRoute(): PublicRoute {
@@ -76,7 +81,9 @@ function getInitialAccountEmail(): string {
 export default function App() {
   const [workspace, setWorkspace] = useState<AccountWorkspace | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);
-  const [page, setPage] = useState<AppPage>("import");
+  const [page, setPage] = useState<WorkspacePage>(() => (
+    typeof window === "undefined" ? "import" : getWorkspacePage(window.location.search)
+  ));
   const [session, setSession] = useState<ImportSession | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +124,27 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    function syncPageFromUrl() {
+      setPage(getWorkspacePage(window.location.search));
+    }
+
+    window.addEventListener("popstate", syncPageFromUrl);
+    return () => window.removeEventListener("popstate", syncPageFromUrl);
+  }, []);
+
+  useEffect(() => {
+    if (!workspace || getPublicRoute()) return;
+
+    if (isWorkspacePage(window.location.search)) {
+      setPage(getWorkspacePage(window.location.search));
+      return;
+    }
+
+    setPage("import");
+    window.history.replaceState(null, "", workspacePageHref("import", window.location.pathname));
+  }, [workspace]);
 
   useEffect(() => {
     if (!activeOrganizationId) {
@@ -170,8 +198,18 @@ export default function App() {
 
   function openWorkspace(nextWorkspace: AccountWorkspace) {
     setWorkspace(nextWorkspace);
-    window.history.replaceState(null, "", window.location.pathname);
+    window.history.replaceState(
+      null,
+      "",
+      workspacePageHref("import", window.location.pathname),
+    );
     setPage("import");
+  }
+
+  function navigateToPage(nextPage: WorkspacePage) {
+    if (nextPage === page && isWorkspacePage(window.location.search)) return;
+    window.history.pushState(null, "", workspacePageHref(nextPage, window.location.pathname));
+    setPage(nextPage);
   }
 
   async function signInWithProvider(provider: BrowserOAuthProvider): Promise<void> {
@@ -257,14 +295,8 @@ export default function App() {
   }
 
   async function deleteAccount() {
-    setError(null);
-    try {
-      await deleteBrowserAccount();
-      window.location.assign("./");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The account could not be deleted.");
-      throw caught;
-    }
+    await deleteBrowserAccount();
+    window.location.assign("./");
   }
 
   async function processFile(file: File) {
@@ -350,7 +382,7 @@ export default function App() {
       }
     } catch (caught) {
       setContactPreferences(previousPreferences);
-      setError(caught instanceof Error ? caught.message : "Preferences could not be saved.");
+      throw caught instanceof Error ? caught : new Error("Preferences could not be saved.");
     }
   }
 
@@ -409,11 +441,14 @@ export default function App() {
       <header className="topbar workspace-topbar">
         <Brand />
         <nav className="app-navigation" aria-label="Application">
-          <button
-            type="button"
+          <a
+            href={workspacePageHref("import", window.location.pathname)}
             className={page === "import" ? "active" : ""}
-            onClick={() => setPage("import")}
-          >Import</button>
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToPage("import");
+            }}
+          >Import</a>
         </nav>
         <div className="account-controls">
           <select
@@ -428,11 +463,14 @@ export default function App() {
           <span className="account-email" title={workspace.session.user.email}>
             {workspace.session.user.email}
           </span>
-          <button
+          <a
             className={`text-button header-settings ${page === "settings" ? "active" : ""}`}
-            type="button"
-            onClick={() => setPage("settings")}
-          >Settings</button>
+            href={workspacePageHref("settings", window.location.pathname)}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToPage("settings");
+            }}
+          >Settings</a>
           <button className="text-button" type="button" onClick={() => void signOut()}>Sign out</button>
         </div>
       </header>
