@@ -53,6 +53,7 @@ export function parseCsvText(text: string, fileName = "upload.csv"): ParsedTable
       sourceType: "csv",
       rowCount: result.data.length,
       columnCount: columns.length,
+      headerRowNumber: 1,
       delimiter: result.meta.delimiter,
     },
     warnings,
