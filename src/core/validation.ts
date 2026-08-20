@@ -34,10 +34,18 @@ export function isPersonalEmail(email: string): boolean {
   return domain !== undefined && PERSONAL_EMAIL_DOMAINS.has(domain);
 }
 
-function missingFieldIssue(row: number, field: CanonicalField): DataIssue {
+function issueBase(lead: CanonicalLead) {
   return {
-    id: `${row}:${field}:missing`,
-    row,
+    recordId: lead.recordId,
+    provenance: lead.provenance,
+    row: lead.sourceRow,
+  } as const;
+}
+
+function missingFieldIssue(lead: CanonicalLead, field: CanonicalField): DataIssue {
+  return {
+    id: `${lead.recordId}:${field}:missing`,
+    ...issueBase(lead),
     field,
     type: "missing",
     severity: "error",
@@ -53,15 +61,15 @@ export function validateLead(
 
   for (const field of config.requiredFields) {
     if (lead[field] === undefined || lead[field] === "") {
-      issues.push(missingFieldIssue(lead.sourceRow, field));
+      issues.push(missingFieldIssue(lead, field));
     }
   }
 
   if (lead.email !== undefined) {
     if (!isValidEmail(lead.email)) {
       issues.push({
-        id: `${lead.sourceRow}:email:invalid`,
-        row: lead.sourceRow,
+        id: `${lead.recordId}:email:invalid`,
+        ...issueBase(lead),
         field: "email",
         type: "invalid",
         severity: "error",
@@ -70,8 +78,8 @@ export function validateLead(
       });
     } else if (isPersonalEmail(lead.email) && config.personalEmailPolicy !== "allow") {
       issues.push({
-        id: `${lead.sourceRow}:email:personal`,
-        row: lead.sourceRow,
+        id: `${lead.recordId}:email:personal`,
+        ...issueBase(lead),
         field: "email",
         type: "warning",
         severity: config.personalEmailPolicy === "block" ? "error" : "warning",
