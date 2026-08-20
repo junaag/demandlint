@@ -11,7 +11,8 @@ import type {
   IssueType,
   ProcessedDataset,
 } from "../application/public";
-import { downloadCleanCsv, downloadReviewCsv } from "../composition/browserExport";
+import type { DataExportFormat, DataExportKind } from "../application/exportFileName";
+import { downloadCleanExport, downloadReviewExport } from "../composition/browserExport";
 import "./DataHealthReview.css";
 
 interface DataHealthReviewProps {
@@ -68,6 +69,9 @@ function IssueEvidence({ issue }: { issue: DataIssue }) {
 export function DataHealthReview({ result, contactPreferences }: DataHealthReviewProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [issueFilter, setIssueFilter] = useState<IssueFilter>("all");
+  const [exportFormat, setExportFormat] = useState<DataExportFormat>("csv");
+  const [exporting, setExporting] = useState<DataExportKind | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const qualityRows = useMemo(() => buildQualityReview(result), [result]);
   const issueCounts = useMemo(() => countIssueTypes(qualityRows), [qualityRows]);
@@ -80,6 +84,22 @@ export function DataHealthReview({ result, contactPreferences }: DataHealthRevie
     ? 0
     : Math.round((result.stats.readyRows / result.stats.totalRows) * 100);
   const reviewExportCount = result.stats.reviewRows + result.stats.blockedRows;
+
+  async function exportFile(kind: DataExportKind) {
+    setExportError(null);
+    setExporting(kind);
+    try {
+      if (kind === "clean") {
+        await downloadCleanExport(result, contactPreferences.exportMode, exportFormat);
+      } else {
+        await downloadReviewExport(result, exportFormat);
+      }
+    } catch (caught) {
+      setExportError(caught instanceof Error ? caught.message : "The export could not be created.");
+    } finally {
+      setExporting(null);
+    }
+  }
 
   return (
     <section className="data-health" aria-live="polite">
@@ -185,27 +205,44 @@ export function DataHealthReview({ result, contactPreferences }: DataHealthRevie
           <p className="section-label">EXPORT</p>
           <h2>Download CRM-ready data without losing exceptions</h2>
           <p>
-            <code>clean.csv</code> contains Ready rows only. <code>review.csv</code> keeps every
-            Review and Blocked row with its source, record identity and quality explanation.
+            <code>clean-YYYYMMDDHHmm.{exportFormat}</code> contains Ready rows only. {" "}
+            <code>review-YYYYMMDDHHmm.{exportFormat}</code> keeps every Review and Blocked row
+            with its source, record identity and quality explanation.
           </p>
         </div>
-        <div className="export-actions">
-          <button
-            className="button primary"
-            type="button"
-            onClick={() => downloadCleanCsv(result, contactPreferences.exportMode)}
-            disabled={result.stats.readyRows === 0}
-          >
-            Download clean.csv <span>{result.stats.readyRows}</span>
-          </button>
-          <button
-            className="button secondary"
-            type="button"
-            onClick={() => downloadReviewCsv(result)}
-            disabled={reviewExportCount === 0}
-          >
-            Download review.csv <span>{reviewExportCount}</span>
-          </button>
+        <div className="export-controls">
+          <label className="export-format-label">
+            <span>File format</span>
+            <select
+              value={exportFormat}
+              disabled={exporting !== null}
+              onChange={(event) => setExportFormat(event.target.value as DataExportFormat)}
+            >
+              <option value="csv">CSV</option>
+              <option value="xlsx">Excel (.xlsx)</option>
+            </select>
+          </label>
+          {exportError && <div className="export-error" role="alert">{exportError}</div>}
+          <div className="export-actions">
+            <button
+              className="button primary"
+              type="button"
+              onClick={() => void exportFile("clean")}
+              disabled={result.stats.readyRows === 0 || exporting !== null}
+            >
+              {exporting === "clean" ? "Creating…" : `Download clean ${exportFormat.toUpperCase()}`}
+              <span>{result.stats.readyRows}</span>
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => void exportFile("review")}
+              disabled={reviewExportCount === 0 || exporting !== null}
+            >
+              {exporting === "review" ? "Creating…" : `Download review ${exportFormat.toUpperCase()}`}
+              <span>{reviewExportCount}</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>

@@ -121,6 +121,10 @@
 }
 .export-panel > div:first-child { max-width: 650px; }
 .export-panel code { padding: 2px 5px; border-radius: 5px; background: #f0f2f5; color: #344057; }
+.export-controls { display: grid; justify-items: end; gap: 9px; min-width: 320px; }
+.export-format-label { display: flex; align-items: center; gap: 9px; color: #5e697c; font-size: 11px; font-weight: 800; }
+.export-format-label select { width: auto; min-width: 140px; padding: 7px 32px 7px 9px; font-size: 12px; }
+.export-error { width: 100%; padding: 8px 10px; border: 1px solid #f1c2bd; border-radius: 8px; background: #fff1f0; color: #8c2e28; font-size: 12px; }
 .export-actions { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
 .button.secondary { background: #eef1f5; color: #263146; }
 .export-actions .button span { margin-left: 5px; min-width: 20px; display: inline-grid; place-items: center; border-radius: 999px; padding: 2px 6px; background: rgba(255, 255, 255, .22); font-size: 10px; }
@@ -131,6 +135,7 @@
   .review-toolbar { align-items: flex-start; flex-direction: column; }
   .filter-group { justify-content: flex-start; }
   .export-panel { align-items: flex-start; flex-direction: column; }
+  .export-controls { width: 100%; min-width: 0; justify-items: start; }
   .export-actions { justify-content: flex-start; }
 }
 
@@ -147,6 +152,7 @@
   .quality-row-summary { grid-template-columns: 1fr; gap: 8px; padding: 14px 16px; }
   .quality-row-issues { padding: 8px 16px 16px; }
   .export-panel { padding: 20px 16px; }
+  .export-format-label { width: 100%; justify-content: space-between; }
   .export-actions { width: 100%; }
   .export-actions .button { width: 100%; }
 }
