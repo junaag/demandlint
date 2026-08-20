@@ -1,6 +1,9 @@
-import type { RawRow } from "../../core/domain";
-
-export type TableSourceType = "csv" | "xlsx";
+export type {
+  LocalTableFile,
+  ParsedTable,
+  ParsedTableMetadata,
+  TableSourceType,
+} from "../../application/import/domain";
 
 export type TableParseErrorCode =
   | "EMPTY_FILE"
@@ -9,28 +12,6 @@ export type TableParseErrorCode =
   | "INVALID_XLSX"
   | "NO_HEADER_ROW"
   | "EMPTY_SHEET";
-
-export interface ParsedTableMetadata {
-  fileName: string;
-  sourceType: TableSourceType;
-  rowCount: number;
-  columnCount: number;
-  headerRowNumber: number;
-  delimiter?: string;
-  sheetName?: string;
-}
-
-export interface ParsedTable {
-  columns: string[];
-  rows: RawRow[];
-  metadata: ParsedTableMetadata;
-  warnings: string[];
-}
-
-export interface LocalTableFile {
-  name: string;
-  bytes: Uint8Array;
-}
 
 export class TableParseError extends Error {
   readonly code: TableParseErrorCode;
