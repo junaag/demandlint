@@ -3,8 +3,10 @@ import type {
   CanonicalLead,
   ColumnMapping,
   DataIssue,
+  DatasetSource,
   RawRow,
 } from "./domain";
+import { createRecordId, createRecordProvenance, DEFAULT_DATASET_SOURCE } from "./provenance";
 
 const EMPTY_TOKENS = new Set(["", "n/a", "na", "null", "-", "--", "unknown"]);
 
@@ -38,9 +40,16 @@ export function normalizeRow(
   row: RawRow,
   mapping: ColumnMapping,
   sourceRow: number,
-  defaults: Partial<Omit<CanonicalLead, "sourceRow">> = {},
+  defaults: Partial<Omit<CanonicalLead, "recordId" | "provenance" | "sourceRow" | "customFields">> = {},
+  source: DatasetSource = DEFAULT_DATASET_SOURCE,
 ): NormalizationResult {
-  const lead: CanonicalLead = { sourceRow };
+  const provenance = createRecordProvenance(source, sourceRow);
+  const recordId = createRecordId(provenance);
+  const lead: CanonicalLead = {
+    recordId,
+    provenance,
+    sourceRow,
+  };
   const issues: DataIssue[] = [];
 
   for (const [sourceColumn, targetField] of Object.entries(mapping)) {
@@ -59,7 +68,9 @@ export function normalizeRow(
 
     if (originalText !== undefined && originalText !== normalizedValue) {
       issues.push({
-        id: `${sourceRow}:${targetField}:normalization`,
+        id: `${recordId}:${targetField}:normalization`,
+        recordId,
+        provenance,
         row: sourceRow,
         field: targetField,
         type: "normalization",
