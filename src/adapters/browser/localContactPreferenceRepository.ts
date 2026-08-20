@@ -21,7 +21,7 @@ function browserStorage(): StorageLike | undefined {
 export class LocalContactPreferenceRepository implements ContactPreferenceRepository {
   constructor(private readonly storage: StorageLike | undefined = browserStorage()) {}
 
-  load(scopeId?: string): ContactPreferences {
+  async load(scopeId?: string): Promise<ContactPreferences> {
     if (!this.storage) return resolveContactPreferences();
 
     try {
@@ -34,7 +34,7 @@ export class LocalContactPreferenceRepository implements ContactPreferenceReposi
     }
   }
 
-  save(preferences: ContactPreferences, scopeId?: string): void {
+  async save(preferences: ContactPreferences, scopeId?: string): Promise<void> {
     if (!this.storage) return;
     try {
       this.storage.setItem(

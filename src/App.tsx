@@ -6,7 +6,7 @@ import {
   type AccountWorkspace,
   type CanonicalField,
   type ContactPreferences,
-  type CreateAccountInput,
+  DEFAULT_CONTACT_PREFERENCES,
   type ImportSession,
   type MappingTemplate,
   type MembershipRole,
@@ -14,14 +14,19 @@ import {
 } from "./application/public";
 import {
   addBrowserOrganizationMember,
-  createBrowserAccount,
   createBrowserOrganization,
+  deleteBrowserAccount,
+  isBrowserOAuthProviderEnabled,
+  isHostedAccountBackendConfigured,
   listBrowserOrganizationMembers,
   loadBrowserAccountWorkspace,
-  signInBrowserAccount,
+  requestBrowserAccountAccess,
+  signInBrowserAccountWithProvider,
   signOutBrowserAccount,
   switchBrowserOrganization,
+  verifyBrowserAccountOtp,
 } from "./composition/browserAccounts";
+import type { BrowserOAuthProvider } from "./composition/browserAccounts";
 import {
   loadBrowserContactPreferences,
   saveBrowserContactPreferences,
@@ -59,18 +64,20 @@ function getAccountMode(): AccountMode {
 }
 
 export default function App() {
-  const [workspace, setWorkspace] = useState<AccountWorkspace | null>(loadBrowserAccountWorkspace);
+  const [workspace, setWorkspace] = useState<AccountWorkspace | null>(null);
+  const [accountLoading, setAccountLoading] = useState(true);
   const [page, setPage] = useState<AppPage>("import");
   const [session, setSession] = useState<ImportSession | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [contactPreferences, setContactPreferences] = useState<ContactPreferences>(
-    () => loadBrowserContactPreferences(workspace?.session.activeOrganizationId),
+    DEFAULT_CONTACT_PREFERENCES,
   );
   const [mappingTemplates, setMappingTemplates] = useState<MappingTemplate[]>([]);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const publicRoute = getPublicRoute();
+  const hosted = isHostedAccountBackendConfigured();
 
   const activeOrganizationId = workspace?.session.activeOrganizationId;
   const source = session?.sources[0];
@@ -83,69 +90,129 @@ export default function App() {
   );
 
   useEffect(() => {
+    let cancelled = false;
+    void loadBrowserAccountWorkspace()
+      .then((savedWorkspace) => {
+        if (!cancelled) setWorkspace(savedWorkspace);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : "Your account could not be loaded.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAccountLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!activeOrganizationId) {
       setMappingTemplates([]);
       setMembers([]);
       return;
     }
     let cancelled = false;
-    setContactPreferences(loadBrowserContactPreferences(activeOrganizationId));
-    setMembers(listBrowserOrganizationMembers(activeOrganizationId));
-    void listBrowserMappingTemplates(activeOrganizationId).then((templates) => {
-      if (!cancelled) setMappingTemplates(templates);
-    });
+    void Promise.all([
+      loadBrowserContactPreferences(activeOrganizationId),
+      listBrowserOrganizationMembers(activeOrganizationId),
+      listBrowserMappingTemplates(activeOrganizationId),
+    ])
+      .then(([preferences, nextMembers, templates]) => {
+        if (cancelled) return;
+        setContactPreferences(preferences);
+        setMembers(nextMembers);
+        setMappingTemplates(templates);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : "Workspace data could not be loaded.");
+        }
+      });
     return () => {
       cancelled = true;
     };
   }, [activeOrganizationId]);
 
-  function createAccount(input: CreateAccountInput) {
+  async function requestAccountAccess(email: string, mode: AccountMode): Promise<boolean> {
     setError(null);
     try {
-      setWorkspace(createBrowserAccount(input));
-      window.history.replaceState(null, "", window.location.pathname);
-      setPage("import");
+      const result = await requestBrowserAccountAccess(email, mode);
+      if (result.workspace) openWorkspace(result.workspace);
+      return result.verificationRequired;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The account could not be opened.");
+      throw caught;
     }
   }
 
-  function signIn(email: string) {
+  async function verifyAccountOtp(email: string, code: string): Promise<void> {
     setError(null);
     try {
-      setWorkspace(signInBrowserAccount(email));
-      window.history.replaceState(null, "", window.location.pathname);
-      setPage("import");
+      openWorkspace(await verifyBrowserAccountOtp(email, code));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The account could not be opened.");
+      throw caught;
     }
   }
 
-  function signOut() {
-    signOutBrowserAccount();
-    window.location.assign("?page=login");
+  function openWorkspace(nextWorkspace: AccountWorkspace) {
+    setWorkspace(nextWorkspace);
+    window.history.replaceState(null, "", window.location.pathname);
+    setPage("import");
   }
 
-  function switchOrganization(organizationId: string) {
+  async function signInWithProvider(provider: BrowserOAuthProvider): Promise<void> {
     setError(null);
     try {
-      setWorkspace(switchBrowserOrganization(organizationId));
+      await signInBrowserAccountWithProvider(provider);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The sign-in provider could not be opened.");
+      throw caught;
+    }
+  }
+
+  async function signOut() {
+    try {
+      await signOutBrowserAccount();
+      window.location.assign("?page=login");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "You could not be signed out.");
+    }
+  }
+
+  async function switchOrganization(organizationId: string) {
+    setError(null);
+    try {
+      setWorkspace(await switchBrowserOrganization(organizationId));
       reset();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The organization could not be opened.");
     }
   }
 
-  function createOrganization(name: string) {
-    const nextWorkspace = createBrowserOrganization(name);
-    setWorkspace(nextWorkspace);
+  async function createOrganization(name: string) {
+    setWorkspace(await createBrowserOrganization(name));
     reset();
   }
 
-  function addMember(email: string, role: MembershipRole) {
+  async function addMember(email: string, role: MembershipRole) {
     if (!activeOrganizationId) return;
-    addBrowserOrganizationMember(activeOrganizationId, email, role);
-    setMembers(listBrowserOrganizationMembers(activeOrganizationId));
+    await addBrowserOrganizationMember(activeOrganizationId, email, role);
+    setMembers(await listBrowserOrganizationMembers(activeOrganizationId));
+  }
+
+  async function deleteAccount() {
+    setError(null);
+    try {
+      await deleteBrowserAccount();
+      window.location.assign("./");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The account could not be deleted.");
+      throw caught;
+    }
   }
 
   async function processFile(file: File) {
@@ -221,11 +288,17 @@ export default function App() {
     setError(null);
   }
 
-  function updateContactPreferences(preferences: ContactPreferences) {
-    saveBrowserContactPreferences(preferences, activeOrganizationId);
+  async function updateContactPreferences(preferences: ContactPreferences) {
+    const previousPreferences = contactPreferences;
     setContactPreferences(preferences);
-    if (session && source?.result) {
-      setSession(updateImportSourceMapping(session, source.id, source.mapping));
+    try {
+      await saveBrowserContactPreferences(preferences, activeOrganizationId);
+      if (session && source?.result) {
+        setSession(updateImportSourceMapping(session, source.id, source.mapping));
+      }
+    } catch (caught) {
+      setContactPreferences(previousPreferences);
+      setError(caught instanceof Error ? caught.message : "Preferences could not be saved.");
     }
   }
 
@@ -248,13 +321,30 @@ export default function App() {
     );
   }
 
+  if (accountLoading) {
+    return (
+      <div className="app-shell account-shell">
+        <main className="auth-page login-page">
+          <section className="auth-card account-loading" aria-live="polite">
+            <span className="loading-spinner" aria-hidden="true" />
+            <strong>Opening DemandLint…</strong>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   if (!workspace) {
     return (
       <div className="app-shell account-shell">
         <AccountGate
           mode={getAccountMode()}
-          onCreateAccount={createAccount}
-          onSignIn={signIn}
+          hosted={hosted}
+          googleEnabled={isBrowserOAuthProviderEnabled("google")}
+          microsoftEnabled={isBrowserOAuthProviderEnabled("azure")}
+          onRequestAccess={requestAccountAccess}
+          onVerifyCode={verifyAccountOtp}
+          onProviderSignIn={signInWithProvider}
           error={error}
         />
       </div>
@@ -281,7 +371,7 @@ export default function App() {
           <select
             aria-label="Active organization"
             value={activeOrganizationId}
-            onChange={(event) => switchOrganization(event.target.value)}
+            onChange={(event) => void switchOrganization(event.target.value)}
           >
             {workspace.organizations.map((organization) => (
               <option key={organization.id} value={organization.id}>{organization.name}</option>
@@ -290,7 +380,7 @@ export default function App() {
           <span className="avatar" title={workspace.session.user.email}>
             {(workspace.session.user.displayName || workspace.session.user.email).slice(0, 1).toUpperCase()}
           </span>
-          <button className="text-button" type="button" onClick={signOut}>Sign out</button>
+          <button className="text-button" type="button" onClick={() => void signOut()}>Sign out</button>
         </div>
       </header>
 
@@ -303,6 +393,8 @@ export default function App() {
             onPreferencesChange={updateContactPreferences}
             onCreateOrganization={createOrganization}
             onAddMember={addMember}
+            hosted={hosted}
+            {...(hosted ? { onDeleteAccount: deleteAccount } : {})}
           />
         ) : (
           <>
@@ -374,7 +466,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.2.1 · Local account preview · lead files never leave this browser ·{" "}
+        DemandLint V0.2.2 · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
         <a href="?page=terms">Terms</a> · <a href="?page=privacy">Privacy</a>
       </footer>
     </div>

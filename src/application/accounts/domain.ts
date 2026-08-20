@@ -42,4 +42,5 @@ export interface CreateOrganizationInput {
 export interface OrganizationMember {
   user: AccountUser;
   membership: OrganizationMembership;
+  status?: "active" | "invited";
 }

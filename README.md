@@ -19,7 +19,7 @@ The first module focuses on **lead import quality**:
 
 ## Current workflow
 
-1. Create or reopen a local test profile and organization workspace
+1. Register or sign in with a one-time code sent to your work email
 2. Upload CSV/XLSX (the best lead worksheet is selected automatically in multi-sheet workbooks)
 3. Confirm the worksheet when relevant, then detect and map columns
 4. Save or apply organization-specific source mapping templates
@@ -43,6 +43,7 @@ Column recognition currently includes common EN / FR / ES / PT lead-export heade
 - GitHub Actions CI
 - reproducible npm lockfile + `npm ci`
 - GitHub Pages deployment
+- Supabase Auth + Postgres control plane with Row Level Security
 
 ## Architecture direction
 
@@ -58,10 +59,10 @@ V0.1.1 prepares DemandLint for future SaaS capabilities without coupling them to
 - replaceable validation and deduplication strategies;
 - automated architecture-boundary tests.
 
-V0.2.0 adds a browser-backed account/workspace adapter to test the complete UX while preserving
-the same ports. Profiles, memberships, preferences and templates are isolated locally by
-organization. This preview is not production authentication and does not synchronize across
-devices; a hosted identity/database adapter will replace it without changing the Clean Core.
+V0.2.2 replaces the browser-only account preview with Supabase passwordless authentication and a
+Row-Level-Security-protected multi-tenant database. Profiles, memberships, preferences and mapping
+templates synchronize across devices, while raw lead files and processed lead rows remain local to
+the browser.
 
 ## Release status
 
@@ -78,6 +79,7 @@ Completed:
 - V0.1.3 — typed multi-email/multi-phone handling, configurable priorities, E.164 normalization and complete contact export
 - V0.2.0 — local account preview, organization workspaces, role simulation, organization-scoped preferences and saved mappings
 - V0.2.1 — work-email-only registration, separate returning-user login, redesigned authentication UI and legal pages
+- V0.2.2 — hosted passwordless accounts, secure organization workspaces, invitations and cross-device configuration sync
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

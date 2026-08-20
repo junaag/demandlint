@@ -15,6 +15,14 @@ concurrency:
   group: github-pages
   cancel-in-progress: true
 
+# Both values below are intentionally public browser configuration. Never add a Supabase secret
+# key or SMTP credential to this workflow.
+env:
+  VITE_SUPABASE_URL: https://pvbqjpsmyxujksjjxcah.supabase.co
+  VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_EgH9aPjXSmTfKepBGc_cRA_Vg6UAVMd
+  VITE_AUTH_GOOGLE_ENABLED: "false"
+  VITE_AUTH_MICROSOFT_ENABLED: "false"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,6 +38,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate hosted account configuration
+        run: test -n "$VITE_SUPABASE_URL" && test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
 
       - name: Typecheck, test and build
         run: npm run ci
