@@ -72,3 +72,16 @@ browser session.
 
 Google and Microsoft buttons stay disabled until their OAuth applications and Supabase providers
 are configured. Enable each corresponding GitHub variable only after its full OAuth flow passes.
+
+## 7. Configure workspace invitation email
+
+The `organization-invitations` Edge Function sends transactional workspace invitations through
+Resend. Add these Edge Function secrets before deploying it:
+
+- `RESEND_API_KEY`: a Resend API key allowed to send from `demandlint.com`
+- `RESEND_FROM_EMAIL`: `DemandLint <auth@demandlint.com>`
+- `DEMANDLINT_APP_URL`: `https://demandlint.com`
+
+Deploy `migrations/20260820_000002_member_management.sql`, then deploy the function with JWT
+verification enabled. Invitation links use `demandlint.com` and open a prefilled registration or
+login page; DemandLint then sends the usual 6-digit authentication code.

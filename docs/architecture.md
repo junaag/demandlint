@@ -268,12 +268,24 @@ deduplication evidence and exports never enter the Supabase schema. Only reusabl
 account metadata synchronize across devices. The browser uses the publishable key; administrative
 keys remain server-side and are never part of the Vite build.
 
+Workspace invitations are delivered by an authenticated Supabase Edge Function through Resend.
+The browser never receives the Resend API key. Invitation links point to `demandlint.com`, prefill
+the invited address and hand authentication back to the existing 6-digit OTP flow. Owner/admin
+checks remain in private Postgres functions for invitation delivery, cancellation and access
+revocation; the UI is not treated as an authorization boundary.
+
+The workspace role hierarchy is asymmetric by design. The owner can promote or demote any active
+admin/member and can transfer ownership to an active admin; that transfer makes the former owner
+an admin. An admin can promote members, revoke members and demote only their own account. Admins
+cannot modify or revoke other admins. The owner cannot demote their own account outside the atomic
+ownership-transfer operation, and the database enforces at most one owner per organization.
+
 ## Current deliberate limitations
 
 V0.2.2 still does not implement:
 
 - Google/Microsoft login or enterprise SSO;
-- invitation revocation and advanced organization administration;
+- advanced organization administration such as custom roles and audit history;
 - visible multi-file merge workflow;
 - CRM OAuth connections;
 - CRM-specific destination adapters;

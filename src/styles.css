@@ -86,6 +86,27 @@ input:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .12
 .app-navigation button.active::after { background: #4058c5; }
 .account-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .account-controls select { width: auto; max-width: 220px; padding: 7px 32px 7px 9px; font-size: 12px; }
+.account-email {
+  max-width: 240px;
+  overflow: hidden;
+  color: #526077;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.header-settings { position: relative; color: #49566d; }
+.header-settings.active { color: #344bb8; }
+.header-settings.active::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: -9px;
+  left: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: #4058c5;
+}
 .avatar {
   width: 32px;
   height: 32px;
@@ -511,12 +532,29 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .members-panel { overflow: hidden; }
 .member-form { display: grid; grid-template-columns: minmax(180px, 1fr) 110px auto; gap: 8px; width: min(560px, 100%); }
 .member-list { display: grid; }
-.member-item { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 12px 24px; border-bottom: 1px solid #edf0f4; }
+.member-item { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 64px; padding: 12px 24px; border-bottom: 1px solid #edf0f4; }
 .member-item:last-child { border-bottom: 0; }
 .member-item > div { display: grid; gap: 2px; }
 .member-item strong { font-size: 13px; }
 .member-item div span { color: #7b8597; font-size: 11px; }
 .member-badges { display: flex !important; align-items: center; flex-direction: row; gap: 6px !important; }
+.member-management { display: flex !important; align-items: flex-end; gap: 6px !important; }
+.member-actions { display: flex !important; align-items: center; flex-direction: row; gap: 2px !important; }
+.member-actions .text-button { padding: 4px 6px; color: #4058c5; font-size: 11px; }
+.member-actions .text-button:disabled { cursor: wait; opacity: .55; }
+.member-actions .destructive-text-button { color: #a8413a; }
+.role-actions select {
+  width: auto;
+  min-width: 88px;
+  padding: 5px 26px 5px 8px;
+  border: 1px solid #d8deea;
+  border-radius: 8px;
+  background: #fff;
+  color: #4e5a6e;
+  font-size: 11px;
+  font-weight: 700;
+}
+.member-actions .ownership-button { color: #6841b4; }
 .status-badge {
   display: inline-flex;
   width: fit-content;
@@ -527,7 +565,24 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
   text-transform: capitalize;
 }
 .status-badge.invited { background: #fff6dd; color: #7b5810 !important; }
-.danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 24px; border-color: #edcbc7; }
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 24px;
+  border: 1px solid #e7aaa4;
+  background: #fff1ef;
+  box-shadow: 0 14px 40px rgba(123, 43, 35, .08);
+}
+.danger-label {
+  display: inline-flex;
+  margin-bottom: 9px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #f7d3cf;
+  color: #8d2f28;
+}
 .danger-zone h2 { margin: 0; font-size: 21px; }
 .danger-zone p:not(.section-label) { margin: 7px 0 0; max-width: 700px; color: #6c7689; font-size: 13px; }
 .danger-button { background: #a8413a; color: white; white-space: nowrap; }
@@ -567,7 +622,7 @@ footer { text-align: center; padding: 24px 20px 34px; color: #8a93a3; font-size:
   .workspace-topbar .brand-lockup span { display: none; }
   .account-controls { gap: 6px; }
   .account-controls select { max-width: 132px; }
-  .account-controls .avatar { display: none; }
+  .account-email { display: none; }
   .text-button { padding: 5px 0 5px 5px; }
   .privacy-pill { display: none; }
   .page { width: min(100% - 24px, 1120px); padding-top: 36px; }
@@ -609,6 +664,8 @@ footer { text-align: center; padding: 24px 20px 34px; color: #8a93a3; font-size:
   .template-item > div:first-child { align-items: flex-start; flex-direction: column; gap: 5px; }
   .member-form { grid-template-columns: 1fr; }
   .member-item { padding: 12px 16px; }
+  .member-management { align-items: flex-end; }
+  .member-actions { align-items: flex-end !important; flex-direction: column !important; }
   .danger-zone { align-items: stretch; flex-direction: column; }
   .delete-account-form { width: 100%; }
 }

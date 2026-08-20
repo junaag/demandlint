@@ -124,6 +124,14 @@ claim secure authentication or cross-device synchronization.
 - Google and Microsoft provider hooks behind feature flags;
 - raw lead files remain browser-local.
 
+## V0.2.3 — Workspace administration
+
+- transactional invitation email through a protected Supabase Edge Function;
+- invitation resend and cancellation;
+- active member access revocation;
+- owner/admin/member role management;
+- atomic ownership transfer from the current owner to an active admin.
+
 ## Next: validation-driven releases
 
 ### Product feedback / UX hardening
@@ -133,7 +141,7 @@ Use real event lead files and capture defects before expanding scope. Add browse
 ### Accounts & saved mappings
 
 - secure Google and Microsoft sign-in;
-- invitation administration and revocation;
+- custom roles and workspace audit history;
 - cross-device destination mapping templates;
 - team-level recipes.
 

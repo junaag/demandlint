@@ -6,6 +6,7 @@ type AuthStage = "email" | "code";
 
 interface AccountGateProps {
   mode: AccountMode;
+  initialEmail?: string;
   hosted: boolean;
   googleEnabled: boolean;
   microsoftEnabled: boolean;
@@ -17,6 +18,7 @@ interface AccountGateProps {
 
 export function AccountGate({
   mode,
+  initialEmail = "",
   hosted,
   googleEnabled,
   microsoftEnabled,
@@ -25,7 +27,7 @@ export function AccountGate({
   onProviderSignIn,
   error,
 }: AccountGateProps) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [stage, setStage] = useState<AuthStage>("email");
   const [busy, setBusy] = useState(false);

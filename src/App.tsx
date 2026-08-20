@@ -14,6 +14,7 @@ import {
 } from "./application/public";
 import {
   addBrowserOrganizationMember,
+  cancelBrowserOrganizationInvitation,
   createBrowserOrganization,
   deleteBrowserAccount,
   isBrowserOAuthProviderEnabled,
@@ -21,9 +22,13 @@ import {
   listBrowserOrganizationMembers,
   loadBrowserAccountWorkspace,
   requestBrowserAccountAccess,
+  resendBrowserOrganizationInvitation,
+  revokeBrowserOrganizationMember,
   signInBrowserAccountWithProvider,
   signOutBrowserAccount,
   switchBrowserOrganization,
+  transferBrowserOrganizationOwnership,
+  updateBrowserOrganizationMemberRole,
   verifyBrowserAccountOtp,
 } from "./composition/browserAccounts";
 import type { BrowserOAuthProvider } from "./composition/browserAccounts";
@@ -61,6 +66,11 @@ function getPublicRoute(): PublicRoute {
 function getAccountMode(): AccountMode {
   if (typeof window === "undefined") return "signup";
   return new URLSearchParams(window.location.search).get("page") === "login" ? "login" : "signup";
+}
+
+function getInitialAccountEmail(): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("email")?.trim() ?? "";
 }
 
 export default function App() {
@@ -204,6 +214,48 @@ export default function App() {
     setMembers(await listBrowserOrganizationMembers(activeOrganizationId));
   }
 
+  async function resendInvitation(memberId: string) {
+    if (!activeOrganizationId) return;
+    await resendBrowserOrganizationInvitation(activeOrganizationId, memberId);
+  }
+
+  async function cancelInvitation(memberId: string) {
+    if (!activeOrganizationId) return;
+    await cancelBrowserOrganizationInvitation(activeOrganizationId, memberId);
+    setMembers(await listBrowserOrganizationMembers(activeOrganizationId));
+  }
+
+  async function revokeMember(memberId: string) {
+    if (!activeOrganizationId) return;
+    await revokeBrowserOrganizationMember(activeOrganizationId, memberId);
+    setMembers(await listBrowserOrganizationMembers(activeOrganizationId));
+  }
+
+  async function updateMemberRole(
+    memberId: string,
+    role: Exclude<MembershipRole, "owner">,
+  ) {
+    if (!activeOrganizationId) return;
+    await updateBrowserOrganizationMemberRole(activeOrganizationId, memberId, role);
+    const [nextWorkspace, nextMembers] = await Promise.all([
+      loadBrowserAccountWorkspace(),
+      listBrowserOrganizationMembers(activeOrganizationId),
+    ]);
+    if (nextWorkspace) setWorkspace(nextWorkspace);
+    setMembers(nextMembers);
+  }
+
+  async function transferOwnership(newOwnerId: string) {
+    if (!activeOrganizationId) return;
+    await transferBrowserOrganizationOwnership(activeOrganizationId, newOwnerId);
+    const [nextWorkspace, nextMembers] = await Promise.all([
+      loadBrowserAccountWorkspace(),
+      listBrowserOrganizationMembers(activeOrganizationId),
+    ]);
+    if (nextWorkspace) setWorkspace(nextWorkspace);
+    setMembers(nextMembers);
+  }
+
   async function deleteAccount() {
     setError(null);
     try {
@@ -339,6 +391,7 @@ export default function App() {
       <div className="app-shell account-shell">
         <AccountGate
           mode={getAccountMode()}
+          initialEmail={getInitialAccountEmail()}
           hosted={hosted}
           googleEnabled={isBrowserOAuthProviderEnabled("google")}
           microsoftEnabled={isBrowserOAuthProviderEnabled("azure")}
@@ -361,11 +414,6 @@ export default function App() {
             className={page === "import" ? "active" : ""}
             onClick={() => setPage("import")}
           >Import</button>
-          <button
-            type="button"
-            className={page === "settings" ? "active" : ""}
-            onClick={() => setPage("settings")}
-          >Settings</button>
         </nav>
         <div className="account-controls">
           <select
@@ -377,9 +425,14 @@ export default function App() {
               <option key={organization.id} value={organization.id}>{organization.name}</option>
             ))}
           </select>
-          <span className="avatar" title={workspace.session.user.email}>
-            {(workspace.session.user.displayName || workspace.session.user.email).slice(0, 1).toUpperCase()}
+          <span className="account-email" title={workspace.session.user.email}>
+            {workspace.session.user.email}
           </span>
+          <button
+            className={`text-button header-settings ${page === "settings" ? "active" : ""}`}
+            type="button"
+            onClick={() => setPage("settings")}
+          >Settings</button>
           <button className="text-button" type="button" onClick={() => void signOut()}>Sign out</button>
         </div>
       </header>
@@ -393,6 +446,11 @@ export default function App() {
             onPreferencesChange={updateContactPreferences}
             onCreateOrganization={createOrganization}
             onAddMember={addMember}
+            onResendInvitation={resendInvitation}
+            onCancelInvitation={cancelInvitation}
+            onRevokeMember={revokeMember}
+            onUpdateMemberRole={updateMemberRole}
+            onTransferOwnership={transferOwnership}
             hosted={hosted}
             {...(hosted ? { onDeleteAccount: deleteAccount } : {})}
           />
@@ -466,7 +524,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.2.2 · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
+        DemandLint V0.2.3 · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
         <a href="?page=terms">Terms</a> · <a href="?page=privacy">Privacy</a>
       </footer>
     </div>
