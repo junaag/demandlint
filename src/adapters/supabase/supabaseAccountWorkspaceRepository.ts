@@ -34,6 +34,16 @@ interface InvitationFunctionResult {
   error?: string;
 }
 
+const workspaceRetryDelaysMs = [0, 500, 1_000] as const;
+
+function isJwtClockSkewError(message: string): boolean {
+  return /jwt\s+issued\s+(?:at|in\s+the)\s+future/i.test(message);
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds));
+}
+
 function normalizeEmail(value: string): string {
   const email = value.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -91,18 +101,30 @@ export class SupabaseAccountWorkspaceRepository {
     const user = sessionData.session?.user;
     if (!user?.email) return null;
 
-    const [profileResponse, membershipResponse] = await Promise.all([
-      client.from("profiles").select("display_name, active_organization_id").eq("id", user.id).single(),
-      client
-        .from("organization_memberships")
-        .select("organization_id, role, organizations(id, name)")
-        .eq("user_id", user.id),
-    ]);
-    if (profileResponse.error) throw new Error(profileResponse.error.message);
-    if (membershipResponse.error) throw new Error(membershipResponse.error.message);
+    let profile: ProfileRow | undefined;
+    let rows: MembershipRow[] | undefined;
+    for (const [attempt, retryDelay] of workspaceRetryDelaysMs.entries()) {
+      if (retryDelay > 0) await wait(retryDelay);
+      const [profileResponse, membershipResponse] = await Promise.all([
+        client.from("profiles").select("display_name, active_organization_id").eq("id", user.id).single(),
+        client
+          .from("organization_memberships")
+          .select("organization_id, role, organizations(id, name)")
+          .eq("user_id", user.id),
+      ]);
+      const responseError = profileResponse.error ?? membershipResponse.error;
+      if (responseError) {
+        const retryAvailable = attempt < workspaceRetryDelaysMs.length - 1;
+        if (retryAvailable && isJwtClockSkewError(responseError.message)) continue;
+        throw new Error(responseError.message);
+      }
 
-    const profile = profileResponse.data as ProfileRow;
-    const rows = membershipResponse.data as unknown as MembershipRow[];
+      profile = profileResponse.data as ProfileRow;
+      rows = membershipResponse.data as unknown as MembershipRow[];
+      break;
+    }
+    if (!profile || !rows) throw new Error("Your authenticated workspace could not be loaded.");
+
     const organizations = rows
       .map((row) => organizationFromRelation(row.organizations))
       .filter((organization): organization is Organization => Boolean(organization));
