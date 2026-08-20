@@ -1,6 +1,6 @@
 import type { ContactPreferences } from "../../core/domain";
 
 export interface ContactPreferenceRepository {
-  load(): ContactPreferences;
-  save(preferences: ContactPreferences): void;
+  load(scopeId?: string): ContactPreferences;
+  save(preferences: ContactPreferences, scopeId?: string): void;
 }

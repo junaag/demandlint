@@ -2,14 +2,31 @@ import type { ContactPreferenceRepository } from "../../application/ports/contac
 import { resolveContactPreferences } from "../../core/contactPoints";
 import type { ContactPreferences } from "../../core/domain";
 
-const STORAGE_KEY = "demandlint.contact-preferences.v1";
+interface StorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+}
+
+const LEGACY_STORAGE_KEY = "demandlint.contact-preferences.v1";
+const STORAGE_KEY_PREFIX = "demandlint.contact-preferences.v2";
+
+function storageKey(scopeId?: string): string {
+  return scopeId ? `${STORAGE_KEY_PREFIX}:${scopeId}` : LEGACY_STORAGE_KEY;
+}
+
+function browserStorage(): StorageLike | undefined {
+  return typeof localStorage === "undefined" ? undefined : localStorage;
+}
 
 export class LocalContactPreferenceRepository implements ContactPreferenceRepository {
-  load(): ContactPreferences {
-    if (typeof localStorage === "undefined") return resolveContactPreferences();
+  constructor(private readonly storage: StorageLike | undefined = browserStorage()) {}
+
+  load(scopeId?: string): ContactPreferences {
+    if (!this.storage) return resolveContactPreferences();
 
     try {
-      const value = localStorage.getItem(STORAGE_KEY);
+      const value = this.storage.getItem(storageKey(scopeId))
+        ?? (scopeId ? this.storage.getItem(LEGACY_STORAGE_KEY) : null);
       if (!value) return resolveContactPreferences();
       return resolveContactPreferences(JSON.parse(value) as Partial<ContactPreferences>);
     } catch {
@@ -17,10 +34,13 @@ export class LocalContactPreferenceRepository implements ContactPreferenceReposi
     }
   }
 
-  save(preferences: ContactPreferences): void {
-    if (typeof localStorage === "undefined") return;
+  save(preferences: ContactPreferences, scopeId?: string): void {
+    if (!this.storage) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(resolveContactPreferences(preferences)));
+      this.storage.setItem(
+        storageKey(scopeId),
+        JSON.stringify(resolveContactPreferences(preferences)),
+      );
     } catch {
       // Storage may be unavailable in private/restricted browser contexts. The
       // in-memory React state still keeps the preference for the current session.

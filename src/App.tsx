@@ -1,32 +1,61 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   analyzeImportSource,
   updateImportSourceMapping,
   validateMapping,
+  type AccountWorkspace,
   type CanonicalField,
   type ContactPreferences,
+  type CreateAccountInput,
   type ImportSession,
+  type MappingTemplate,
+  type MembershipRole,
+  type OrganizationMember,
 } from "./application/public";
-import { createBrowserImportSession } from "./composition/browserImport";
-import { DataHealthReview } from "./components/DataHealthReview";
-import { ContactPreferencesPanel } from "./components/ContactPreferencesPanel";
-import { FileSummary } from "./components/FileSummary";
-import { MappingPanel } from "./components/MappingPanel";
-import { UploadPanel } from "./components/UploadPanel";
+import {
+  addBrowserOrganizationMember,
+  createBrowserOrganization,
+  listBrowserOrganizationMembers,
+  loadBrowserAccountWorkspace,
+  signInBrowserAccount,
+  signOutBrowserAccount,
+  switchBrowserOrganization,
+} from "./composition/browserAccounts";
 import {
   loadBrowserContactPreferences,
   saveBrowserContactPreferences,
 } from "./composition/browserContactPreferences";
+import { createBrowserImportSession } from "./composition/browserImport";
+import {
+  deleteBrowserMappingTemplate,
+  listBrowserMappingTemplates,
+  mappingFromBrowserTemplate,
+  saveBrowserMappingTemplate,
+} from "./composition/browserMappingTemplates";
+import { AccountGate } from "./components/AccountGate";
+import { DataHealthReview } from "./components/DataHealthReview";
+import { FileSummary } from "./components/FileSummary";
+import { MappingPanel } from "./components/MappingPanel";
+import { MappingTemplatesPanel } from "./components/MappingTemplatesPanel";
+import { UploadPanel } from "./components/UploadPanel";
+import { WorkspaceSettings } from "./components/WorkspaceSettings";
+
+type AppPage = "import" | "settings";
 
 export default function App() {
+  const [workspace, setWorkspace] = useState<AccountWorkspace | null>(loadBrowserAccountWorkspace);
+  const [page, setPage] = useState<AppPage>("import");
   const [session, setSession] = useState<ImportSession | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [contactPreferences, setContactPreferences] = useState<ContactPreferences>(
-    loadBrowserContactPreferences,
+    () => loadBrowserContactPreferences(workspace?.session.activeOrganizationId),
   );
+  const [mappingTemplates, setMappingTemplates] = useState<MappingTemplate[]>([]);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
 
+  const activeOrganizationId = workspace?.session.activeOrganizationId;
   const source = session?.sources[0];
   const table = source?.table;
   const result = source?.result;
@@ -35,6 +64,62 @@ export default function App() {
     () => (source ? validateMapping(source.table, source.mapping) : null),
     [source],
   );
+
+  useEffect(() => {
+    if (!activeOrganizationId) {
+      setMappingTemplates([]);
+      setMembers([]);
+      return;
+    }
+    let cancelled = false;
+    setContactPreferences(loadBrowserContactPreferences(activeOrganizationId));
+    setMembers(listBrowserOrganizationMembers(activeOrganizationId));
+    void listBrowserMappingTemplates(activeOrganizationId).then((templates) => {
+      if (!cancelled) setMappingTemplates(templates);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrganizationId]);
+
+  function signIn(input: CreateAccountInput) {
+    setError(null);
+    try {
+      setWorkspace(signInBrowserAccount(input));
+      setPage("import");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The account could not be opened.");
+    }
+  }
+
+  function signOut() {
+    signOutBrowserAccount();
+    setWorkspace(null);
+    setPage("import");
+    reset();
+  }
+
+  function switchOrganization(organizationId: string) {
+    setError(null);
+    try {
+      setWorkspace(switchBrowserOrganization(organizationId));
+      reset();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The organization could not be opened.");
+    }
+  }
+
+  function createOrganization(name: string) {
+    const nextWorkspace = createBrowserOrganization(name);
+    setWorkspace(nextWorkspace);
+    reset();
+  }
+
+  function addMember(email: string, role: MembershipRole) {
+    if (!activeOrganizationId) return;
+    addBrowserOrganizationMember(activeOrganizationId, email, role);
+    setMembers(listBrowserOrganizationMembers(activeOrganizationId));
+  }
 
   async function processFile(file: File) {
     setBusy(true);
@@ -76,6 +161,33 @@ export default function App() {
     );
   }
 
+  function applyTemplate(template: MappingTemplate) {
+    if (!session || !source || !table) return;
+    const savedMapping = mappingFromBrowserTemplate(template);
+    const mapping = Object.fromEntries(
+      table.columns.map((column) => [column, savedMapping[column] ?? "ignore"]),
+    );
+    setSession(updateImportSourceMapping(session, source.id, mapping));
+    setError(null);
+  }
+
+  async function saveTemplate(name: string) {
+    if (!activeOrganizationId || !source || !table) return;
+    await saveBrowserMappingTemplate({
+      name,
+      organizationId: activeOrganizationId,
+      mapping: source.mapping,
+      sourceColumns: table.columns,
+    });
+    setMappingTemplates(await listBrowserMappingTemplates(activeOrganizationId));
+  }
+
+  async function deleteTemplate(id: string) {
+    if (!activeOrganizationId) return;
+    await deleteBrowserMappingTemplate(id);
+    setMappingTemplates(await listBrowserMappingTemplates(activeOrganizationId));
+  }
+
   function reset() {
     setSession(null);
     setUploadedFile(null);
@@ -83,7 +195,7 @@ export default function App() {
   }
 
   function updateContactPreferences(preferences: ContactPreferences) {
-    saveBrowserContactPreferences(preferences);
+    saveBrowserContactPreferences(preferences, activeOrganizationId);
     setContactPreferences(preferences);
     if (session && source?.result) {
       setSession(updateImportSourceMapping(session, source.id, source.mapping));
@@ -101,87 +213,143 @@ export default function App() {
     }
   }
 
+  if (!workspace) {
+    return (
+      <div className="app-shell account-shell">
+        <header className="topbar">
+          <Brand />
+          <div className="privacy-pill">Processed locally · no upload</div>
+        </header>
+        <AccountGate onContinue={signIn} error={error} />
+        <footer>DemandLint V0.2.0 · Local account preview · local-first processing</footer>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">D</div>
-          <div>
-            <strong>DemandLint</strong>
-            <span>Lead import quality</span>
-          </div>
+      <header className="topbar workspace-topbar">
+        <Brand />
+        <nav className="app-navigation" aria-label="Application">
+          <button
+            type="button"
+            className={page === "import" ? "active" : ""}
+            onClick={() => setPage("import")}
+          >Import</button>
+          <button
+            type="button"
+            className={page === "settings" ? "active" : ""}
+            onClick={() => setPage("settings")}
+          >Settings</button>
+        </nav>
+        <div className="account-controls">
+          <select
+            aria-label="Active organization"
+            value={activeOrganizationId}
+            onChange={(event) => switchOrganization(event.target.value)}
+          >
+            {workspace.organizations.map((organization) => (
+              <option key={organization.id} value={organization.id}>{organization.name}</option>
+            ))}
+          </select>
+          <span className="avatar" title={workspace.session.user.email}>
+            {(workspace.session.user.displayName || workspace.session.user.email).slice(0, 1).toUpperCase()}
+          </span>
+          <button className="text-button" type="button" onClick={signOut}>Sign out</button>
         </div>
-        <div className="privacy-pill">Processed locally · no upload</div>
       </header>
 
       <main className="page">
-        <section className="hero">
-          <p className="eyebrow">CRM IMPORT PRE-FLIGHT</p>
-          <h1>Catch bad lead data before it reaches your CRM.</h1>
-          <p>
-            Upload a CSV or XLSX file, confirm the field mapping, then run DemandLint’s
-            deterministic quality checks directly in your browser.
-          </p>
-        </section>
-
-        <nav className="steps" aria-label="Import workflow">
-          <div className={`step ${table ? "complete" : "active"}`}><span>1</span>Upload</div>
-          <div className={`step ${table && !result ? "active" : result ? "complete" : ""}`}><span>2</span>Map fields</div>
-          <div className={`step ${result ? "active" : ""}`}><span>3</span>Review & export</div>
-        </nav>
-
-        {error && <div className="alert error-alert" role="alert">{error}</div>}
-
-        {!source || !table ? (
-          <UploadPanel busy={busy} onFile={(file) => void processFile(file)} />
+        {page === "settings" ? (
+          <WorkspaceSettings
+            workspace={workspace}
+            members={members}
+            preferences={contactPreferences}
+            onPreferencesChange={updateContactPreferences}
+            onCreateOrganization={createOrganization}
+            onAddMember={addMember}
+          />
         ) : (
           <>
-            <FileSummary
-              table={table}
-              busy={busy}
-              onReset={reset}
-              onSheetChange={(sheetName) => void selectWorksheet(sheetName)}
-            />
-            <MappingPanel
-              table={table}
-              plan={source.mappingPlan}
-              mapping={source.mapping}
-              onChange={updateMapping}
-            />
-            <ContactPreferencesPanel
-              preferences={contactPreferences}
-              onChange={updateContactPreferences}
-            />
-
-            <section className={`validation-bar ${validation?.valid ? "valid" : "invalid"}`}>
-              <div>
-                <strong>{validation?.valid ? "Mapping ready" : "Mapping needs attention"}</strong>
-                {validation?.valid ? (
-                  <span>Required fields are present and each target is mapped once.</span>
-                ) : (
-                  <span>{validation?.errors.join(" ")}</span>
-                )}
-              </div>
-              <button
-                className="button primary"
-                type="button"
-                disabled={!validation?.valid}
-                onClick={runAnalysis}
-              >
-                Analyze data
-              </button>
+            <section className="hero">
+              <p className="eyebrow">CRM IMPORT PRE-FLIGHT</p>
+              <h1>Catch bad lead data before it reaches your CRM.</h1>
+              <p>
+                Upload a CSV or XLSX file, confirm the field mapping, then run DemandLint’s
+                deterministic quality checks directly in your browser.
+              </p>
             </section>
 
-            {result && (
-              <DataHealthReview result={result} contactPreferences={contactPreferences} />
+            <nav className="steps" aria-label="Import workflow">
+              <div className={`step ${table ? "complete" : "active"}`}><span>1</span>Upload</div>
+              <div className={`step ${table && !result ? "active" : result ? "complete" : ""}`}><span>2</span>Map fields</div>
+              <div className={`step ${result ? "active" : ""}`}><span>3</span>Review & export</div>
+            </nav>
+
+            {error && <div className="alert error-alert" role="alert">{error}</div>}
+
+            {!source || !table ? (
+              <UploadPanel busy={busy} onFile={(file) => void processFile(file)} />
+            ) : (
+              <>
+                <FileSummary
+                  table={table}
+                  busy={busy}
+                  onReset={reset}
+                  onSheetChange={(sheetName) => void selectWorksheet(sheetName)}
+                />
+                <MappingPanel
+                  table={table}
+                  plan={source.mappingPlan}
+                  mapping={source.mapping}
+                  onChange={updateMapping}
+                />
+                <MappingTemplatesPanel
+                  templates={mappingTemplates}
+                  currentColumns={table.columns}
+                  onSave={saveTemplate}
+                  onApply={applyTemplate}
+                  onDelete={deleteTemplate}
+                />
+
+                <section className={`validation-bar ${validation?.valid ? "valid" : "invalid"}`}>
+                  <div>
+                    <strong>{validation?.valid ? "Mapping ready" : "Mapping needs attention"}</strong>
+                    {validation?.valid ? (
+                      <span>Required fields are present and each target is mapped once.</span>
+                    ) : (
+                      <span>{validation?.errors.join(" ")}</span>
+                    )}
+                  </div>
+                  <button
+                    className="button primary"
+                    type="button"
+                    disabled={!validation?.valid}
+                    onClick={runAnalysis}
+                  >Analyze data</button>
+                </section>
+
+                {result && (
+                  <DataHealthReview result={result} contactPreferences={contactPreferences} />
+                )}
+              </>
             )}
           </>
         )}
       </main>
 
       <footer>
-        DemandLint V0.1.3 · Local-first processing · contact preferences saved on this device
+        DemandLint V0.2.0 · Local account preview · lead files never leave this browser
       </footer>
+    </div>
+  );
+}
+
+function Brand() {
+  return (
+    <div className="brand-lockup">
+      <div className="brand-mark" aria-hidden="true">D</div>
+      <div><strong>DemandLint</strong><span>Lead import quality</span></div>
     </div>
   );
 }

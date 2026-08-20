@@ -77,6 +77,11 @@ Contact preferences use the same boundary: the UI calls the composition layer, w
 `ContactPreferenceRepository` port to browser storage. A future authenticated repository can
 replace that adapter without changing contact selection or normalization rules.
 
+V0.2.0 scopes those browser preferences by the active organization. Account workspaces and
+mapping templates follow the same UI → composition → port → adapter direction. The initial
+browser adapters are deliberately replaceable test implementations; they validate product flows
+without putting authentication or persistence rules into React or the Clean Core.
+
 ## Import session model
 
 V0.1.1 introduces an explicit import session:
@@ -230,14 +235,29 @@ DemandLint does not silently discard bad data.
 - duplicate/conflict evidence retains source provenance;
 - review/blocked rows remain exportable.
 
+## V0.2.0 account preview
+
+The first account workspace is a GitHub Pages-compatible preview:
+
+- a user enters a name and email, but no password is collected or stored;
+- the normalized email reopens the same local profile on the same browser;
+- organizations, memberships, active organization, contact preferences and mapping templates are
+  persisted in browser storage;
+- raw lead data remains transient and local to the import session;
+- each organization gets isolated preferences and templates;
+- owner/admin/member behavior can be evaluated before secure invitations are connected.
+
+The local adapter is not an identity provider and must not be presented as secure authentication.
+Production accounts will replace it with hosted implementations of the existing application ports.
+
 ## Current deliberate limitations
 
 V0.1.1 prepares but does not yet implement:
 
-- real authentication or SSO;
-- a database;
-- organization administration UI;
-- persistent mapping templates;
+- secure hosted authentication, Google/Microsoft login or SSO;
+- a synchronized database;
+- secure member invitations;
+- cross-device mapping templates;
 - visible multi-file merge workflow;
 - CRM OAuth connections;
 - CRM-specific destination adapters;
