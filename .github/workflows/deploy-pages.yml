@@ -31,8 +31,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate hosted account configuration
+        run: test -n "$VITE_SUPABASE_URL" && test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
       - name: Typecheck, test and build
         run: npm run ci
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_AUTH_GOOGLE_ENABLED: ${{ vars.VITE_AUTH_GOOGLE_ENABLED }}
+          VITE_AUTH_MICROSOFT_ENABLED: ${{ vars.VITE_AUTH_MICROSOFT_ENABLED }}
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

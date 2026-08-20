@@ -173,6 +173,7 @@ input:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .12
 
 .alert { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; font-size: 14px; }
 .error-alert { background: #fff1f0; border: 1px solid #f1c2bd; color: #8c2e28; }
+.success-alert { background: #edf9f1; border: 1px solid #bfe2ca; color: #28633d; }
 
 .file-summary { display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; gap: 24px; align-items: center; padding: 22px 24px; margin-bottom: 16px; }
 .file-summary h2, .mapping-panel h2, .result-panel h2 { margin: 0; font-size: 20px; }
@@ -400,6 +401,8 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
   font-weight: 650;
   cursor: not-allowed;
 }
+.auth-providers button:not(:disabled) { cursor: pointer; }
+.auth-providers button:not(:disabled):hover { border-color: #bac4ee; background: #f8f9ff; }
 .google-symbol { color: #4285f4; font-size: 19px; font-weight: 900; }
 .microsoft-symbol { width: 18px; height: 18px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; }
 .microsoft-symbol i:nth-child(1) { background: #f35325; }
@@ -417,6 +420,15 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .auth-form label > span { color: #536482; font-size: 13px; font-weight: 700; }
 .auth-form input { min-height: 52px; padding: 13px 14px; border-color: #d8dde6; border-radius: 11px; font-size: 15px; }
 .auth-form input::placeholder { color: #a1a9b7; }
+.auth-form .otp-input {
+  text-align: center;
+  letter-spacing: .38em;
+  font-size: 23px;
+  font-weight: 800;
+}
+.otp-help { margin: -13px 0 0; color: #7a8599; text-align: center; font-size: 11px; }
+.otp-actions { display: flex; justify-content: center; gap: 24px; }
+.otp-actions .text-button { color: #4454bd; text-decoration: underline; }
 .auth-submit {
   width: 100%;
   min-height: 52px;
@@ -434,6 +446,16 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 }
 .auth-legal { max-width: 510px; margin: 23px auto 0; color: #77849b; text-align: center; font-size: 11px; line-height: 1.55; }
 .auth-legal a { color: #536482; text-decoration: underline; font-weight: 650; }
+.account-loading { display: flex; align-items: center; justify-content: center; gap: 13px; min-height: 120px; color: #34425d; }
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid #dfe4f8;
+  border-top-color: #596de0;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .legal-shell { min-height: 100vh; }
 .legal-page { width: min(100% - 32px, 920px); margin: 0 auto; padding: 42px 0 64px; }
@@ -494,6 +516,24 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .member-item > div { display: grid; gap: 2px; }
 .member-item strong { font-size: 13px; }
 .member-item div span { color: #7b8597; font-size: 11px; }
+.member-badges { display: flex !important; align-items: center; flex-direction: row; gap: 6px !important; }
+.status-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px !important;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+.status-badge.invited { background: #fff6dd; color: #7b5810 !important; }
+.danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 24px; border-color: #edcbc7; }
+.danger-zone h2 { margin: 0; font-size: 21px; }
+.danger-zone p:not(.section-label) { margin: 7px 0 0; max-width: 700px; color: #6c7689; font-size: 13px; }
+.danger-button { background: #a8413a; color: white; white-space: nowrap; }
+.delete-account-form { display: grid; gap: 10px; width: min(410px, 100%); }
+.delete-account-form label { display: grid; gap: 6px; color: #6f3d39; font-size: 11px; font-weight: 800; }
+.delete-account-form > div { display: flex; justify-content: flex-end; gap: 8px; }
 
 footer { text-align: center; padding: 24px 20px 34px; color: #8a93a3; font-size: 11px; }
 
@@ -569,4 +609,6 @@ footer { text-align: center; padding: 24px 20px 34px; color: #8a93a3; font-size:
   .template-item > div:first-child { align-items: flex-start; flex-direction: column; gap: 5px; }
   .member-form { grid-template-columns: 1fr; }
   .member-item { padding: 12px 16px; }
+  .danger-zone { align-items: stretch; flex-direction: column; }
+  .delete-account-form { width: 100%; }
 }

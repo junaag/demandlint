@@ -255,14 +255,25 @@ accepts a professional email and derives preview labels from it; login only reop
 present in the browser repository. This prevents the login screen from silently creating accounts
 and maps cleanly to future hosted `signUp` and `signIn` adapter operations.
 
+## V0.2.2 hosted account control plane
+
+Supabase now implements the hosted authentication and persistence boundary. Work-email OTP creates
+an authenticated session without a password. Postgres stores profiles, organizations, memberships,
+pending invitations, contact preferences and mapping templates. Every exposed table has Row Level
+Security, with membership-aware policies and narrowly scoped RPC functions for organization and
+account lifecycle operations.
+
+The data-plane split remains unchanged: uploaded lead files, parsed rows, normalized contacts,
+deduplication evidence and exports never enter the Supabase schema. Only reusable configuration and
+account metadata synchronize across devices. The browser uses the publishable key; administrative
+keys remain server-side and are never part of the Vite build.
+
 ## Current deliberate limitations
 
-V0.1.1 prepares but does not yet implement:
+V0.2.2 still does not implement:
 
-- secure hosted authentication, Google/Microsoft login or SSO;
-- a synchronized database;
-- secure member invitations;
-- cross-device mapping templates;
+- Google/Microsoft login or enterprise SSO;
+- invitation revocation and advanced organization administration;
 - visible multi-file merge workflow;
 - CRM OAuth connections;
 - CRM-specific destination adapters;

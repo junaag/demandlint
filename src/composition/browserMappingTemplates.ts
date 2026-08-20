@@ -5,6 +5,14 @@ import {
   type MappingTemplate,
 } from "../application/mapping/contracts";
 import { localMappingTemplateRepository } from "../adapters/browser/localMappingTemplateRepository";
+import { isSupabaseConfigured } from "../adapters/supabase/client";
+import { supabaseMappingTemplateRepository } from "../adapters/supabase/supabaseMappingTemplateRepository";
+
+function mappingTemplateRepository() {
+  return isSupabaseConfigured()
+    ? supabaseMappingTemplateRepository
+    : localMappingTemplateRepository;
+}
 
 function templateId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -12,7 +20,7 @@ function templateId(): string {
 }
 
 export function listBrowserMappingTemplates(organizationId: string): Promise<MappingTemplate[]> {
-  return localMappingTemplateRepository.listForOrganization(organizationId);
+  return mappingTemplateRepository().listForOrganization(organizationId);
 }
 
 export async function saveBrowserMappingTemplate(input: {
@@ -31,12 +39,12 @@ export async function saveBrowserMappingTemplate(input: {
     sourceMapping: sourceMappingFromRuntime(input.mapping),
     sourceSignature: [...input.sourceColumns],
   };
-  await localMappingTemplateRepository.save(template);
+  await mappingTemplateRepository().save(template);
   return template;
 }
 
 export function deleteBrowserMappingTemplate(id: string): Promise<void> {
-  return localMappingTemplateRepository.delete(id);
+  return mappingTemplateRepository().delete(id);
 }
 
 export function mappingFromBrowserTemplate(template: MappingTemplate): ColumnMapping {

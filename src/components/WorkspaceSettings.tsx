@@ -11,23 +11,30 @@ interface WorkspaceSettingsProps {
   workspace: AccountWorkspace;
   members: OrganizationMember[];
   preferences: ContactPreferences;
-  onPreferencesChange: (preferences: ContactPreferences) => void;
-  onCreateOrganization: (name: string) => void;
-  onAddMember: (email: string, role: MembershipRole) => void;
+  hosted: boolean;
+  onPreferencesChange: (preferences: ContactPreferences) => Promise<void>;
+  onCreateOrganization: (name: string) => Promise<void>;
+  onAddMember: (email: string, role: MembershipRole) => Promise<void>;
+  onDeleteAccount?: () => Promise<void>;
 }
 
 export function WorkspaceSettings({
   workspace,
   members,
   preferences,
+  hosted,
   onPreferencesChange,
   onCreateOrganization,
   onAddMember,
+  onDeleteAccount,
 }: WorkspaceSettingsProps) {
   const [organizationName, setOrganizationName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<MembershipRole>("member");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const activeOrganization = workspace.organizations.find(
     (item) => item.id === workspace.session.activeOrganizationId,
   );
@@ -35,25 +42,44 @@ export function WorkspaceSettings({
     (item) => item.organizationId === workspace.session.activeOrganizationId,
   );
 
-  function createOrganization(event: FormEvent<HTMLFormElement>) {
+  async function createOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setBusy(true);
     try {
-      onCreateOrganization(organizationName);
+      await onCreateOrganization(organizationName);
       setOrganizationName("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The organization could not be created.");
+    } finally {
+      setBusy(false);
     }
   }
 
-  function addMember(event: FormEvent<HTMLFormElement>) {
+  async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setBusy(true);
     try {
-      onAddMember(memberEmail, memberRole);
+      await onAddMember(memberEmail, memberRole);
       setMemberEmail("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The member could not be added.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!onDeleteAccount || deleteConfirmation !== "DELETE") return;
+    setError(null);
+    setBusy(true);
+    try {
+      await onDeleteAccount();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The account could not be deleted.");
+      setBusy(false);
     }
   }
 
@@ -66,10 +92,11 @@ export function WorkspaceSettings({
       </section>
 
       <div className="preview-notice">
-        <strong>V0.2 local account preview</strong>
+        <strong>{hosted ? "V0.2.2 hosted workspace" : "Local development preview"}</strong>
         <span>
-          Accounts, members, preferences and templates persist in this browser. Cross-device sync
-          and secure invitations require the hosted authentication backend planned next.
+          {hosted
+            ? "Your account, organizations, preferences and mapping templates are synchronized securely across devices. Lead files still remain in this browser."
+            : "Accounts, members, preferences and templates persist only in this browser."}
         </span>
       </div>
 
@@ -86,13 +113,13 @@ export function WorkspaceSettings({
         <article className="panel settings-card">
           <p className="section-label">NEW ORGANIZATION</p>
           <h2>Create another workspace</h2>
-          <form className="inline-form" onSubmit={createOrganization}>
+          <form className="inline-form" onSubmit={(event) => void createOrganization(event)}>
             <input
               value={organizationName}
               onChange={(event) => setOrganizationName(event.target.value)}
               placeholder="Organization name"
             />
-            <button className="button ghost" type="submit" disabled={!organizationName.trim()}>
+            <button className="button ghost" type="submit" disabled={busy || !organizationName.trim()}>
               Create
             </button>
           </form>
@@ -104,10 +131,14 @@ export function WorkspaceSettings({
           <div>
             <p className="section-label">MEMBERS</p>
             <h2>Organization access</h2>
-            <p>Test roles and team membership before secure email invitations are connected.</p>
+            <p>
+              {hosted
+                ? "Invite colleagues by work email and manage their workspace role."
+                : "Test roles and team membership in this browser."}
+            </p>
           </div>
           {activeMembership?.role !== "member" && (
-            <form className="member-form" onSubmit={addMember}>
+            <form className="member-form" onSubmit={(event) => void addMember(event)}>
               <input
                 type="email"
                 value={memberEmail}
@@ -122,20 +153,23 @@ export function WorkspaceSettings({
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
               </select>
-              <button className="button ghost" type="submit" disabled={!memberEmail.trim()}>
-                Add member
+              <button className="button ghost" type="submit" disabled={busy || !memberEmail.trim()}>
+                {hosted ? "Send invite" : "Add member"}
               </button>
             </form>
           )}
         </div>
         <div className="member-list">
-          {members.map(({ user, membership }) => (
+          {members.map(({ user, membership, status }) => (
             <div className="member-item" key={`${membership.organizationId}:${user.id}`}>
               <span className="avatar" aria-hidden="true">
                 {(user.displayName || user.email).slice(0, 1).toUpperCase()}
               </span>
               <div><strong>{user.displayName || user.email}</strong><span>{user.email}</span></div>
-              <span className="role-badge">{membership.role}</span>
+              <div className="member-badges">
+                {status === "invited" && <span className="status-badge invited">invited</span>}
+                <span className="role-badge">{membership.role}</span>
+              </div>
             </div>
           ))}
         </div>
@@ -144,8 +178,45 @@ export function WorkspaceSettings({
       <ContactPreferencesPanel
         preferences={preferences}
         onChange={onPreferencesChange}
-        storageDescription="Preferences are saved for the active organization in this browser."
+        storageDescription={hosted
+          ? " Preferences are synchronized for the active organization."
+          : " Preferences are saved for the active organization in this browser."}
       />
+
+      {onDeleteAccount && (
+        <section className="panel danger-zone">
+          <div>
+            <p className="section-label">DANGER ZONE</p>
+            <h2>Delete my account</h2>
+            <p>This permanently removes your profile and memberships. Lead files are not stored by DemandLint.</p>
+          </div>
+          {!deleteOpen ? (
+            <button className="button danger-button" type="button" onClick={() => setDeleteOpen(true)}>
+              Delete account
+            </button>
+          ) : (
+            <form className="delete-account-form" onSubmit={(event) => void deleteAccount(event)}>
+              <label>
+                <span>Type DELETE to confirm</span>
+                <input
+                  value={deleteConfirmation}
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <div>
+                <button className="button ghost" type="button" disabled={busy} onClick={() => {
+                  setDeleteOpen(false);
+                  setDeleteConfirmation("");
+                }}>Cancel</button>
+                <button className="button danger-button" type="submit" disabled={busy || deleteConfirmation !== "DELETE"}>
+                  {busy ? "Deleting…" : "Delete permanently"}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+      )}
     </div>
   );
 }

@@ -113,7 +113,18 @@ claim secure authentication or cross-device synchronization.
 - publish DemandLint-specific Conditions of Use and Privacy Policy drafts documenting the local-first preview.
 - keep registration as the English-language homepage and expose login and legal pages through distinct reload-safe URLs.
 
-## Next: hosted accounts & validation-driven releases
+## V0.2.2 — Hosted passwordless accounts
+
+- Supabase Free authentication and Postgres persistence;
+- 6-digit work-email OTP with persisted sessions;
+- automatic profile and initial organization creation;
+- RLS-protected organizations, memberships and invitations;
+- cross-device contact preferences and mapping templates;
+- account deletion and hosted-data legal disclosures;
+- Google and Microsoft provider hooks behind feature flags;
+- raw lead files remain browser-local.
+
+## Next: validation-driven releases
 
 ### Product feedback / UX hardening
 
@@ -121,13 +132,10 @@ Use real event lead files and capture defects before expanding scope. Add browse
 
 ### Accounts & saved mappings
 
-- hosted authentication and database adapter;
 - secure Google and Microsoft sign-in;
-- organization memberships and roles;
-- invitation acceptance and administration;
-- cross-device source/destination mapping templates;
+- invitation administration and revocation;
+- cross-device destination mapping templates;
 - team-level recipes.
-- synchronize V0.2 organization preferences across authenticated devices.
 
 ### Multi-source imports
 

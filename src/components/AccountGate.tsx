@@ -1,23 +1,87 @@
 import { useState, type FormEvent } from "react";
-import type { CreateAccountInput } from "../application/public";
 
 export type AccountMode = "signup" | "login";
+type OAuthProvider = "google" | "azure";
+type AuthStage = "email" | "code";
 
 interface AccountGateProps {
   mode: AccountMode;
-  onCreateAccount: (input: CreateAccountInput) => void;
-  onSignIn: (email: string) => void;
+  hosted: boolean;
+  googleEnabled: boolean;
+  microsoftEnabled: boolean;
+  onRequestAccess: (email: string, mode: AccountMode) => Promise<boolean>;
+  onVerifyCode: (email: string, code: string) => Promise<void>;
+  onProviderSignIn: (provider: OAuthProvider) => Promise<void>;
   error?: string | null;
 }
 
-export function AccountGate({ mode, onCreateAccount, onSignIn, error }: AccountGateProps) {
+export function AccountGate({
+  mode,
+  hosted,
+  googleEnabled,
+  microsoftEnabled,
+  onRequestAccess,
+  onVerifyCode,
+  onProviderSignIn,
+  error,
+}: AccountGateProps) {
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [stage, setStage] = useState<AuthStage>("email");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const creating = mode === "signup";
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function requestAccess(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (creating) onCreateAccount({ email });
-    else onSignIn(email);
+    setBusy(true);
+    setNotice(null);
+    try {
+      const verificationRequired = await onRequestAccess(email, mode);
+      if (verificationRequired) {
+        setStage("code");
+        setCode("");
+      }
+    } catch {
+      // The parent exposes the backend error in the shared alert.
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setNotice(null);
+    try {
+      await onVerifyCode(email, code);
+    } catch {
+      // The parent exposes the backend error in the shared alert.
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendCode() {
+    setBusy(true);
+    setNotice(null);
+    try {
+      await onRequestAccess(email, mode);
+      setNotice("A new code has been sent.");
+    } catch {
+      // The parent exposes the backend error in the shared alert.
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openProvider(provider: OAuthProvider) {
+    setBusy(true);
+    try {
+      await onProviderSignIn(provider);
+    } catch {
+      setBusy(false);
+    }
   }
 
   const formCard = (
@@ -31,66 +95,120 @@ export function AccountGate({ mode, onCreateAccount, onSignIn, error }: AccountG
 
       <div className="auth-heading">
         <h1 id="auth-title">
-          {creating ? "Start cleaning leads for free" : "Welcome back!"}
+          {stage === "code"
+            ? "Check your email"
+            : creating
+              ? "Start cleaning leads for free"
+              : "Welcome back!"}
         </h1>
         <p>
-          {creating
-            ? "Create your workspace with your work email."
-            : "Sign in to your DemandLint workspace."}
+          {stage === "code"
+            ? <>Enter the 6-digit code sent to <strong>{email}</strong>.</>
+            : creating
+              ? "Create your workspace with your work email. No password needed."
+              : "Sign in with your work email. We will send you a secure one-time code."}
         </p>
       </div>
 
-      <div className={`auth-providers ${creating ? "" : "login-providers"}`} aria-label="Future sign-in options">
-        <button type="button" disabled title="Google sign-in coming soon">
-          <span className="google-symbol" aria-hidden="true">G</span>
-          Google
-        </button>
-        <button type="button" disabled title="Microsoft sign-in coming soon">
-          <span className="microsoft-symbol" aria-hidden="true">
-            <i /><i /><i /><i />
-          </span>
-          Microsoft
-        </button>
-        {!creating && (
-          <button type="button" disabled title="Organization SSO coming soon">
-            <svg className="organization-symbol" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="8" cy="8" r="4" />
-              <path d="M11 11l9 9m-3-3 2-2m-5-1 2-2" />
-            </svg>
-            Organization
-          </button>
-        )}
-      </div>
+      {stage === "email" && (
+        <>
+          <div className={`auth-providers ${creating ? "" : "login-providers"}`} aria-label="Sign-in options">
+            <button
+              type="button"
+              disabled={!googleEnabled || busy}
+              title={googleEnabled ? "Continue with Google" : "Google sign-in coming soon"}
+              onClick={() => void openProvider("google")}
+            >
+              <span className="google-symbol" aria-hidden="true">G</span>
+              Google
+            </button>
+            <button
+              type="button"
+              disabled={!microsoftEnabled || busy}
+              title={microsoftEnabled ? "Continue with Microsoft" : "Microsoft sign-in coming soon"}
+              onClick={() => void openProvider("azure")}
+            >
+              <span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>
+              Microsoft
+            </button>
+            {!creating && (
+              <button type="button" disabled title="Organization SSO coming later">
+                <svg className="organization-symbol" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="8" cy="8" r="4" />
+                  <path d="M11 11l9 9m-3-3 2-2m-5-1 2-2" />
+                </svg>
+                Organization
+              </button>
+            )}
+          </div>
 
-      <div className="auth-separator"><span>or</span></div>
+          <div className="auth-separator"><span>or</span></div>
+        </>
+      )}
 
       {error && <div className="alert error-alert auth-error" role="alert">{error}</div>}
+      {notice && <div className="alert success-alert auth-error" role="status">{notice}</div>}
 
-      <form className="auth-form" onSubmit={submit}>
-        <label>
-          <span>{creating ? "Work email" : "Email"}</span>
-          <input
-            required
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@company.com"
-            autoFocus
-          />
-        </label>
-        <button className="button primary auth-submit" type="submit">
-          {creating ? "Create my account" : "Sign in"}
-        </button>
-      </form>
+      {stage === "email" ? (
+        <form className="auth-form" onSubmit={(event) => void requestAccess(event)}>
+          <label>
+            <span>Work email</span>
+            <input
+              required
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@company.com"
+              autoFocus
+            />
+          </label>
+          <button className="button primary auth-submit" type="submit" disabled={busy}>
+            {busy ? "Sending code…" : creating ? "Create my account" : "Continue with email"}
+          </button>
+        </form>
+      ) : (
+        <form className="auth-form otp-form" onSubmit={(event) => void verifyCode(event)}>
+          <label>
+            <span>Verification code</span>
+            <input
+              required
+              className="otp-input"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              aria-describedby="otp-help"
+              autoFocus
+            />
+          </label>
+          <p id="otp-help" className="otp-help">The code expires shortly and can only be used once.</p>
+          <button className="button primary auth-submit" type="submit" disabled={busy || code.length !== 6}>
+            {busy ? "Verifying…" : "Verify and continue"}
+          </button>
+          <div className="otp-actions">
+            <button type="button" className="text-button" disabled={busy} onClick={() => void resendCode()}>
+              Resend code
+            </button>
+            <button type="button" className="text-button" disabled={busy} onClick={() => setStage("email")}>
+              Change email
+            </button>
+          </div>
+        </form>
+      )}
 
-      <p className="auth-switch">
-        {creating ? "Already have an account?" : "Do not have an account yet?"}{" "}
-        <a href={creating ? "?page=login" : "./"}>
-          {creating ? "Sign in" : "Create an account for free"}
-        </a>
-      </p>
+      {stage === "email" && (
+        <p className="auth-switch">
+          {creating ? "Already have an account?" : "Do not have an account yet?"}{" "}
+          <a href={creating ? "?page=login" : "./"}>
+            {creating ? "Sign in" : "Create an account for free"}
+          </a>
+        </p>
+      )}
 
       <p className="auth-legal">
         {creating ? (
@@ -98,16 +216,16 @@ export function AccountGate({ mode, onCreateAccount, onSignIn, error }: AccountG
             By continuing, you agree to the <a href="?page=terms">Terms and Conditions</a> and{" "}
             <a href="?page=privacy">Privacy Policy</a>.
           </>
+        ) : hosted ? (
+          <>DemandLint uses a secure one-time email code. No password is requested or stored.</>
         ) : (
-          <>This preview uses local email sign-in. No password is requested or stored.</>
+          <>Local development preview: no real email is sent and no password is stored.</>
         )}
       </p>
     </section>
   );
 
-  if (!creating) {
-    return <main className="auth-page login-page">{formCard}</main>;
-  }
+  if (!creating) return <main className="auth-page login-page">{formCard}</main>;
 
   return (
     <main className="auth-page signup-page">

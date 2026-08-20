@@ -70,12 +70,12 @@ function TermsContent() {
       </section>
 
       <section>
-        <h2>4. Preview account</h2>
+        <h2>4. Account and workspace</h2>
         <p>
-          Your account, organizations, preferences and mapping templates are saved in your browser’s
-          local storage. DemandLint does not collect a password. This is not production authentication
-          and does not provide cross-device synchronization or automatic recovery after browser data is
-          deleted.
+          DemandLint uses passwordless email authentication. Your account, organizations, memberships,
+          preferences and mapping templates may be synchronized through the hosted account service.
+          You are responsible for maintaining access to your work email and for activities performed
+          through your authenticated session.
         </p>
       </section>
 
@@ -121,9 +121,10 @@ function TermsContent() {
       <section>
         <h2>9. Suspension and termination</h2>
         <p>
-          You may stop using DemandLint at any time and delete the site’s local data from your browser
-          settings. Access may be suspended in the event of unlawful, fraudulent or abusive use, or use
-          that could harm the service or a third party.
+          You may stop using DemandLint and request account deletion from workspace settings. Browser
+          site data can also be deleted through your browser settings. Access may be suspended in the
+          event of unlawful, fraudulent or abusive use, or use that could harm the service or a third
+          party.
         </p>
       </section>
 
@@ -153,14 +154,17 @@ function PrivacyContent() {
 
       <section>
         <h2>2. Data saved by DemandLint</h2>
-        <p>In the current version, your browser may save the following information locally:</p>
+        <p>The hosted account service may save the following information:</p>
         <ul>
           <li>your work email and the profile name derived from it;</li>
-          <li>your organizations, members, roles and active organization;</li>
+          <li>your organizations, invitations, members, roles and active organization;</li>
           <li>your phone and email priority preferences; and</li>
           <li>your column-mapping templates.</li>
         </ul>
-        <p>DemandLint does not request or store a password.</p>
+        <p>
+          DemandLint does not request or store a password. Your browser also stores the technical
+          session information required to keep you signed in.
+        </p>
       </section>
 
       <section>
@@ -177,53 +181,59 @@ function PrivacyContent() {
         <h2>4. Purposes and legal bases</h2>
         <p>
           Profile and configuration data are used to provide the requested workspace, remember your
-          preferences and operate the preview. The precise legal basis for each processing activity must
-          be confirmed once the publisher, commercial model and final contractual journey are defined.
+          preferences, authenticate your access, support organization collaboration and secure the
+          service. The precise legal basis for each processing activity must be confirmed once the
+          publisher, commercial model and final contractual journey are defined.
         </p>
       </section>
 
       <section>
         <h2>5. Hosting and technical data</h2>
         <p>
-          The site is currently hosted on GitHub Pages. Like any web host, GitHub may process technical
-          data required to deliver and secure the service, including IP address, browser, device and
-          request logs, under its own documentation and privacy statement.
+          The site is hosted on GitHub Pages. Account authentication and workspace configuration are
+          hosted using Supabase. These providers may process technical data required to deliver and
+          secure their services, including IP address, browser, device, authentication events and
+          request logs, under their own documentation and contractual terms.
         </p>
       </section>
 
       <section>
         <h2>6. Recipients and international transfers</h2>
         <p>
-          DemandLint does not sell your data. In the current version, contact files are not shared with a
-          DemandLint provider. Any technical processing performed by GitHub takes place within GitHub’s
-          infrastructure. Future authentication, cloud synchronization or analytics must be added to this
-          Policy before being enabled.
+          DemandLint does not sell your data. GitHub and Supabase act as technical service providers for
+          site delivery and the account control plane. Contact files are not shared with those providers
+          by DemandLint’s import workflow. The final processor list, hosting regions and safeguards for
+          any international transfers must be completed before commercial launch.
         </p>
       </section>
 
       <section>
         <h2>7. Cookies and local storage</h2>
         <p>
-          DemandLint currently uses no advertising cookies or audience-analytics tool. Browser local
-          storage retains the preview profile and workspace preferences. You can delete this information
-          from your browser’s privacy or site-data settings.
+          DemandLint currently uses no advertising cookies or audience-analytics tool. Browser storage
+          retains the authenticated session and may retain local fallback configuration used during
+          development. You can clear browser data, but doing so does not by itself delete synchronized
+          account information from the hosted service.
         </p>
       </section>
 
       <section>
         <h2>8. Retention</h2>
         <p>
-          Local data remains on the device until the user deletes it, the browser is reset or the service
-          changes. GitHub determines the retention periods that apply to its own technical logs.
+          Account and workspace configuration remains available while the account is active and is
+          removed or anonymized according to the final retention policy after deletion. Authentication
+          and hosting providers determine the retention periods that apply to their security logs and
+          backups. Lead-file contents remain transient in the browser unless you save an export yourself.
         </p>
       </section>
 
       <section>
         <h2>9. Security</h2>
         <p>
-          Local processing limits transfers of contact files, but security also depends on your device,
-          browser and practices. Do not use the preview for sensitive data on a shared device, and review
-          every file before using it in a CRM.
+          DemandLint uses one-time email codes, persisted authenticated sessions and organization-level
+          access rules for hosted configuration. Local processing limits transfers of contact files, but
+          security also depends on your email account, device, browser and practices. Review every file
+          before using it in a CRM.
         </p>
       </section>
 
@@ -231,10 +241,10 @@ function PrivacyContent() {
         <h2>10. Your rights</h2>
         <p>
           Depending on the GDPR and applicable law, you may have rights of access, correction, deletion,
-          restriction, objection and portability. For data stored only in your browser, you can act
-          directly by deleting the site’s local data. A privacy-rights contact address must be published
-          before launch. You may also lodge a complaint with the French CNIL or another competent data
-          protection authority.
+          restriction, objection and portability. Workspace settings provide an account-deletion action;
+          browser-only data can be cleared through your browser settings. A privacy-rights contact
+          address must be published before launch. You may also lodge a complaint with the French CNIL
+          or another competent data protection authority.
         </p>
       </section>
 

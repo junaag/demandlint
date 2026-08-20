@@ -9,19 +9,19 @@ class MemoryStorage {
 }
 
 describe("local contact preference repository", () => {
-  it("stores different priorities for different organizations", () => {
+  it("stores different priorities for different organizations", async () => {
     const repository = new LocalContactPreferenceRepository(new MemoryStorage());
-    repository.save({
+    await repository.save({
       ...DEFAULT_CONTACT_PREFERENCES,
       phonePriority: ["direct", "mobile", "standard", "other"],
     }, "org-fr");
-    repository.save({
+    await repository.save({
       ...DEFAULT_CONTACT_PREFERENCES,
       defaultPhoneCountry: "ES",
     }, "org-es");
 
-    expect(repository.load("org-fr").phonePriority[0]).toBe("direct");
-    expect(repository.load("org-es").defaultPhoneCountry).toBe("ES");
-    expect(repository.load("org-new")).toEqual(DEFAULT_CONTACT_PREFERENCES);
+    expect((await repository.load("org-fr")).phonePriority[0]).toBe("direct");
+    expect((await repository.load("org-es")).defaultPhoneCountry).toBe("ES");
+    expect(await repository.load("org-new")).toEqual(DEFAULT_CONTACT_PREFERENCES);
   });
 });
