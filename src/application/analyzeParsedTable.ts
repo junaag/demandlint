@@ -1,5 +1,10 @@
 import type { ParsedTable } from "../adapters/table/domain";
-import type { CanonicalField, ColumnMapping, ProcessedDataset } from "../core/domain";
+import type {
+  CanonicalField,
+  ColumnMapping,
+  DatasetSource,
+  ProcessedDataset,
+} from "../core/domain";
 import { processDataset } from "../core/processDataset";
 
 export const REQUIRED_IMPORT_FIELDS: readonly CanonicalField[] = [
@@ -53,17 +58,36 @@ export function validateMapping(
   };
 }
 
+export function datasetSourceForTable(
+  table: ParsedTable,
+  sourceId = `file:${table.metadata.fileName}`,
+): DatasetSource {
+  return {
+    id: sourceId,
+    name: table.metadata.fileName,
+    sourceType: table.metadata.sourceType,
+    headerRowNumber: table.metadata.headerRowNumber,
+    ...(table.metadata.sheetName ? { sheetName: table.metadata.sheetName } : {}),
+  };
+}
+
 export function analyzeParsedTable(
   table: ParsedTable,
   mapping: ColumnMapping,
+  sourceId?: string,
 ): ProcessedDataset {
   const validation = validateMapping(table, mapping);
   if (!validation.valid) {
     throw new Error(validation.errors.join(" "));
   }
 
-  return processDataset(table.rows, mapping, {
-    requiredFields: [...REQUIRED_IMPORT_FIELDS],
-    personalEmailPolicy: "warning",
-  });
+  return processDataset(
+    table.rows,
+    mapping,
+    {
+      requiredFields: [...REQUIRED_IMPORT_FIELDS],
+      personalEmailPolicy: "warning",
+    },
+    datasetSourceForTable(table, sourceId),
+  );
 }
