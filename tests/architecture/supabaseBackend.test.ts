@@ -72,6 +72,7 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain("Only the workspace owner can transfer ownership");
     expect(migration).toContain("Admins can promote members and demote only their own account");
     expect(migration).toContain("Admins can only revoke members");
+    expect(migration).toContain("Transfer ownership before deleting your account");
     expect(migration).toContain("set role = 'admin'");
     expect(migration).toContain("set role = 'owner'");
     expect(migration).not.toMatch(

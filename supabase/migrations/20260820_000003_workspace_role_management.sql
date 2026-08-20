@@ -247,7 +247,6 @@ set search_path = ''
 as $$
 declare
   owned_organization record;
-  successor_id uuid;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
 
@@ -256,27 +255,17 @@ begin
     from public.organization_memberships membership
     where membership.user_id = auth.uid() and membership.role = 'owner'
   loop
-    successor_id := null;
-    select membership.user_id into successor_id
-    from public.organization_memberships membership
-    where membership.organization_id = owned_organization.organization_id
-      and membership.user_id <> auth.uid()
-    order by case membership.role when 'admin' then 0 else 1 end, membership.created_at
-    limit 1;
-
-    if successor_id is null then
-      delete from public.organizations where id = owned_organization.organization_id;
-    else
-      update public.organization_memberships
-      set role = 'admin'
-      where organization_id = owned_organization.organization_id
-        and user_id = auth.uid();
-
-      update public.organization_memberships
-      set role = 'owner'
-      where organization_id = owned_organization.organization_id
-        and user_id = successor_id;
+    if exists (
+      select 1
+      from public.organization_memberships membership
+      where membership.organization_id = owned_organization.organization_id
+        and membership.user_id <> auth.uid()
+    ) then
+      raise exception 'Transfer ownership before deleting your account';
     end if;
+
+    delete from public.organizations
+    where id = owned_organization.organization_id;
   end loop;
 
   delete from auth.users where id = auth.uid();
