@@ -1,10 +1,22 @@
 import type { CanonicalField, ColumnMapping } from "../../core/domain";
 
-export type SourceMapping = ColumnMapping;
-
 export type FieldReference =
   | { kind: "canonical"; field: CanonicalField }
   | { kind: "custom"; key: string };
+
+export type SourceMappingTarget = FieldReference | { kind: "ignore" };
+export type SourceMapping = Record<string, SourceMappingTarget>;
+
+export function sourceMappingFromRuntime(mapping: ColumnMapping): SourceMapping {
+  return Object.fromEntries(
+    Object.entries(mapping).map(([sourceColumn, target]) => [
+      sourceColumn,
+      target === "ignore"
+        ? { kind: "ignore" as const }
+        : { kind: "canonical" as const, field: target },
+    ]),
+  );
+}
 
 export interface DestinationFieldMapping {
   source: FieldReference;
