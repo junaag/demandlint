@@ -3,6 +3,7 @@ export type {
   ParsedTable,
   ParsedTableMetadata,
   TableSourceType,
+  WorkbookSheetMetadata,
 } from "../../application/import/domain";
 
 export type TableParseErrorCode =
@@ -11,7 +12,8 @@ export type TableParseErrorCode =
   | "INVALID_CSV"
   | "INVALID_XLSX"
   | "NO_HEADER_ROW"
-  | "EMPTY_SHEET";
+  | "EMPTY_SHEET"
+  | "UNKNOWN_SHEET";
 
 export class TableParseError extends Error {
   readonly code: TableParseErrorCode;

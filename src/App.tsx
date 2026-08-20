@@ -14,6 +14,7 @@ import { UploadPanel } from "./components/UploadPanel";
 
 export default function App() {
   const [session, setSession] = useState<ImportSession | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,12 +30,28 @@ export default function App() {
   async function processFile(file: File) {
     setBusy(true);
     setError(null);
+    setUploadedFile(file);
 
     try {
       setSession(await createBrowserImportSession(file));
     } catch (caught) {
       setSession(null);
+      setUploadedFile(null);
       setError(caught instanceof Error ? caught.message : "The file could not be read.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function selectWorksheet(sheetName: string) {
+    if (!uploadedFile) return;
+    setBusy(true);
+    setError(null);
+
+    try {
+      setSession(await createBrowserImportSession(uploadedFile, { sheetName }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The worksheet could not be read.");
     } finally {
       setBusy(false);
     }
@@ -52,6 +69,7 @@ export default function App() {
 
   function reset() {
     setSession(null);
+    setUploadedFile(null);
     setError(null);
   }
 
@@ -101,7 +119,12 @@ export default function App() {
           <UploadPanel busy={busy} onFile={(file) => void processFile(file)} />
         ) : (
           <>
-            <FileSummary table={table} onReset={reset} />
+            <FileSummary
+              table={table}
+              busy={busy}
+              onReset={reset}
+              onSheetChange={(sheetName) => void selectWorksheet(sheetName)}
+            />
             <MappingPanel
               table={table}
               plan={source.mappingPlan}
@@ -134,7 +157,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.1.1 · Local-first processing · architecture ready for saved mappings and connectors
+        DemandLint V0.1.2 · Local-first processing · architecture ready for saved mappings and connectors
       </footer>
     </div>
   );

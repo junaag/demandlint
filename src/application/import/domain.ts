@@ -3,6 +3,16 @@ import type { MappingPlan } from "../../core/mapping/domain";
 
 export type TableSourceType = "csv" | "xlsx";
 
+export interface WorkbookSheetMetadata {
+  name: string;
+  index: number;
+  rowCount: number;
+  columnCount: number;
+  headerRowNumber?: number;
+  recognizedFieldCount: number;
+  usable: boolean;
+}
+
 export interface ParsedTableMetadata {
   fileName: string;
   sourceType: TableSourceType;
@@ -11,6 +21,8 @@ export interface ParsedTableMetadata {
   headerRowNumber: number;
   delimiter?: string;
   sheetName?: string;
+  sheetSelection?: "automatic" | "manual";
+  workbookSheets?: WorkbookSheetMetadata[];
 }
 
 export interface ParsedTable {

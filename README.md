@@ -19,8 +19,8 @@ The first module focuses on **lead import quality**:
 
 ## Current workflow
 
-1. Upload CSV/XLSX
-2. Detect and map columns
+1. Upload CSV/XLSX (the best lead worksheet is selected automatically in multi-sheet workbooks)
+2. Confirm the worksheet when relevant, then detect and map columns
 3. Normalize values
 4. Validate required fields and email quality
 5. Detect duplicates
@@ -68,6 +68,7 @@ Completed:
 - V0.0.5 — Data Health review + clean/review CSV export
 - V0.1.0 — GitHub Pages deployment and real-user test protocol
 - V0.1.1 — architecture hardening for saved mappings, multi-source imports, organizations and CRM connectors
+- V0.1.2 — automatic lead-sheet detection and manual worksheet selection for multi-sheet XLSX files
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

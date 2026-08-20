@@ -66,6 +66,15 @@ Prepare the MVP for long-term product expansion without changing the user promis
 - reproducible `package-lock.json` + `npm ci` builds;
 - architecture ADRs and regression tests.
 
+## V0.1.2 — Multi-sheet XLSX
+
+- parse every worksheet locally;
+- rank candidate tables from deterministic source-mapping evidence;
+- automatically select the strongest lead worksheet;
+- expose all workbook sheets and allow a manual override;
+- reset mapping and analysis cleanly after a worksheet switch;
+- cover multi-sheet ingestion with regression tests.
+
 ## Next: validation-driven releases
 
 ### Product feedback / UX hardening
