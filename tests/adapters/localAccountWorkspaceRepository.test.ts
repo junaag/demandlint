@@ -46,6 +46,69 @@ describe("local account workspace repository", () => {
       "admin",
     );
     expect(member.membership.role).toBe("admin");
+    expect(member.status).toBe("invited");
     expect(repository.listMembers(second.session.activeOrganizationId as string)).toHaveLength(2);
+  });
+
+  it("resends and cancels invitations, then revokes active members", () => {
+    const repository = new LocalAccountWorkspaceRepository(new MemoryStorage());
+    const ownerWorkspace = repository.createAccount({ email: "owner@company.com" });
+    const organizationId = ownerWorkspace.session.activeOrganizationId as string;
+
+    const invited = repository.addMember(organizationId, "pending@company.com", "member");
+    expect(invited.status).toBe("invited");
+    expect(() => repository.resendInvitation(organizationId, invited.user.id)).not.toThrow();
+    repository.cancelInvitation(organizationId, invited.user.id);
+    expect(repository.listMembers(organizationId).map((item) => item.user.email))
+      .not.toContain("pending@company.com");
+
+    repository.signOut();
+    const teammate = repository.createAccount({ email: "active@company.com" });
+    repository.signOut();
+    repository.signIn("owner@company.com");
+    const active = repository.addMember(organizationId, teammate.session.user.email, "admin");
+    expect(active.status).toBe("active");
+    repository.revokeMember(organizationId, active.user.id);
+    expect(repository.listMembers(organizationId).map((item) => item.user.email))
+      .not.toContain("active@company.com");
+  });
+
+  it("enforces role hierarchy and transfers ownership atomically", () => {
+    const repository = new LocalAccountWorkspaceRepository(new MemoryStorage());
+    const owner = repository.createAccount({ email: "owner@company.com" });
+    const organizationId = owner.session.activeOrganizationId as string;
+
+    repository.signOut();
+    const firstAdmin = repository.createAccount({ email: "admin.one@company.com" }).session.user;
+    repository.signOut();
+    const secondAdmin = repository.createAccount({ email: "admin.two@company.com" }).session.user;
+    repository.signOut();
+    const member = repository.createAccount({ email: "member@company.com" }).session.user;
+    repository.signOut();
+    repository.signIn(owner.session.user.email);
+
+    repository.addMember(organizationId, firstAdmin.email, "admin");
+    repository.addMember(organizationId, secondAdmin.email, "admin");
+    repository.addMember(organizationId, member.email, "member");
+    expect(() => repository.updateMemberRole(organizationId, owner.session.user.id, "member"))
+      .toThrow("transferring ownership");
+
+    repository.signOut();
+    repository.signIn(firstAdmin.email);
+    expect(() => repository.updateMemberRole(organizationId, secondAdmin.id, "member"))
+      .toThrow("demote only their own");
+    expect(() => repository.revokeMember(organizationId, secondAdmin.id))
+      .toThrow("only revoke members");
+    repository.updateMemberRole(organizationId, member.id, "admin");
+    repository.updateMemberRole(organizationId, firstAdmin.id, "member");
+
+    repository.signOut();
+    repository.signIn(owner.session.user.email);
+    repository.transferOwnership(organizationId, member.id);
+    const roles = Object.fromEntries(
+      repository.listMembers(organizationId).map((item) => [item.user.email, item.membership.role]),
+    );
+    expect(roles[owner.session.user.email]).toBe("admin");
+    expect(roles[member.email]).toBe("owner");
   });
 });

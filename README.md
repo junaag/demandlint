@@ -80,6 +80,7 @@ Completed:
 - V0.2.0 — local account preview, organization workspaces, role simulation, organization-scoped preferences and saved mappings
 - V0.2.1 — work-email-only registration, separate returning-user login, redesigned authentication UI and legal pages
 - V0.2.2 — hosted passwordless accounts, secure organization workspaces, invitations and cross-device configuration sync
+- V0.2.3 — transactional workspace invitations, member lifecycle controls and hierarchical role/ownership management
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

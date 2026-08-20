@@ -90,6 +90,62 @@ export async function addBrowserOrganizationMember(
     : localAccountWorkspaceRepository.addMember(organizationId, email, role);
 }
 
+export async function resendBrowserOrganizationInvitation(
+  organizationId: string,
+  memberId: string,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    await supabaseAccountWorkspaceRepository.resendInvitation(organizationId, memberId);
+    return;
+  }
+  localAccountWorkspaceRepository.resendInvitation(organizationId, memberId);
+}
+
+export async function cancelBrowserOrganizationInvitation(
+  organizationId: string,
+  memberId: string,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    await supabaseAccountWorkspaceRepository.cancelInvitation(organizationId, memberId);
+    return;
+  }
+  localAccountWorkspaceRepository.cancelInvitation(organizationId, memberId);
+}
+
+export async function revokeBrowserOrganizationMember(
+  organizationId: string,
+  memberId: string,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    await supabaseAccountWorkspaceRepository.revokeMember(organizationId, memberId);
+    return;
+  }
+  localAccountWorkspaceRepository.revokeMember(organizationId, memberId);
+}
+
+export async function updateBrowserOrganizationMemberRole(
+  organizationId: string,
+  memberId: string,
+  role: Exclude<MembershipRole, "owner">,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    await supabaseAccountWorkspaceRepository.updateMemberRole(organizationId, memberId, role);
+    return;
+  }
+  localAccountWorkspaceRepository.updateMemberRole(organizationId, memberId, role);
+}
+
+export async function transferBrowserOrganizationOwnership(
+  organizationId: string,
+  newOwnerId: string,
+): Promise<void> {
+  if (isSupabaseConfigured()) {
+    await supabaseAccountWorkspaceRepository.transferOwnership(organizationId, newOwnerId);
+    return;
+  }
+  localAccountWorkspaceRepository.transferOwnership(organizationId, newOwnerId);
+}
+
 export async function deleteBrowserAccount(): Promise<void> {
   if (!isSupabaseConfigured()) throw new Error("Account deletion requires hosted authentication.");
   await supabaseAccountWorkspaceRepository.deleteCurrentAccount();

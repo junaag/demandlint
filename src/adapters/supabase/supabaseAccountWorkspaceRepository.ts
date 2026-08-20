@@ -30,6 +30,10 @@ interface MemberRpcRow {
   status: "active" | "invited";
 }
 
+interface InvitationFunctionResult {
+  error?: string;
+}
+
 function normalizeEmail(value: string): string {
   const email = value.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -172,16 +176,59 @@ export class SupabaseAccountWorkspaceRepository {
     role: MembershipRole,
   ): Promise<OrganizationMember> {
     const email = normalizeEmail(emailValue);
-    const { error } = await getSupabaseClient().rpc("invite_organization_member", {
-      target_organization_id: organizationId,
-      member_email: email,
-      member_role: role,
+    await this.invokeInvitationFunction({
+      action: "invite",
+      organizationId,
+      email,
+      role,
     });
-    if (error) throw new Error(error.message);
     const members = await this.listMembers(organizationId);
     const member = members.find((candidate) => candidate.user.email === email);
     if (!member) throw new Error("The member invitation could not be loaded.");
     return member;
+  }
+
+  async resendInvitation(organizationId: string, memberId: string): Promise<void> {
+    await this.invokeInvitationFunction({ action: "resend", organizationId, memberId });
+  }
+
+  async cancelInvitation(organizationId: string, memberId: string): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("remove_organization_member", {
+      target_organization_id: organizationId,
+      target_member_id: memberId,
+      removal_type: "cancel",
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async revokeMember(organizationId: string, memberId: string): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("remove_organization_member", {
+      target_organization_id: organizationId,
+      target_member_id: memberId,
+      removal_type: "revoke",
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async updateMemberRole(
+    organizationId: string,
+    memberId: string,
+    role: Exclude<MembershipRole, "owner">,
+  ): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("update_organization_member_role", {
+      target_organization_id: organizationId,
+      target_member_id: memberId,
+      new_role: role,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async transferOwnership(organizationId: string, newOwnerId: string): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("transfer_organization_ownership", {
+      target_organization_id: organizationId,
+      new_owner_id: newOwnerId,
+    });
+    if (error) throw new Error(error.message);
   }
 
   async deleteCurrentAccount(): Promise<void> {
@@ -189,6 +236,15 @@ export class SupabaseAccountWorkspaceRepository {
     const { error } = await client.rpc("delete_current_account");
     if (error) throw new Error(error.message);
     await client.auth.signOut({ scope: "local" });
+  }
+
+  private async invokeInvitationFunction(body: Record<string, string>): Promise<void> {
+    const { data, error } = await getSupabaseClient().functions.invoke<InvitationFunctionResult>(
+      "organization-invitations",
+      { body },
+    );
+    if (error) throw new Error(data?.error ?? error.message);
+    if (data?.error) throw new Error(data.error);
   }
 }
 

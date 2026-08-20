@@ -14,11 +14,12 @@ interface StorageLike {
 }
 
 interface AccountDatabase {
-  version: 1;
+  version: 2;
   currentUserId?: string;
   users: AccountUser[];
   organizations: Organization[];
   memberships: OrganizationMembership[];
+  memberStatusByKey: Record<string, "active" | "invited">;
   activeOrganizationByUser: Record<string, string>;
 }
 
@@ -26,10 +27,11 @@ const STORAGE_KEY = "demandlint.account-workspaces.v1";
 
 function emptyDatabase(): AccountDatabase {
   return {
-    version: 1,
+    version: 2,
     users: [],
     organizations: [],
     memberships: [],
+    memberStatusByKey: {},
     activeOrganizationByUser: {},
   };
 }
@@ -81,6 +83,10 @@ function nextId(prefix: string): string {
     return `${prefix}_${crypto.randomUUID()}`;
   }
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+}
+
+function memberKey(organizationId: string, userId: string): string {
+  return `${organizationId}:${userId}`;
 }
 
 export class LocalAccountWorkspaceRepository {
@@ -184,7 +190,11 @@ export class LocalAccountWorkspaceRepository {
       .filter((membership) => membership.organizationId === organizationId)
       .flatMap((membership) => {
         const user = database.users.find((candidate) => candidate.id === membership.userId);
-        return user ? [{ user, membership }] : [];
+        return user ? [{
+          user,
+          membership,
+          status: database.memberStatusByKey[memberKey(organizationId, user.id)] ?? "active",
+        }] : [];
       });
   }
 
@@ -221,8 +231,127 @@ export class LocalAccountWorkspaceRepository {
     } else {
       membership.role = role;
     }
+    const status = existingUser ? "active" : "invited";
+    database.memberStatusByKey[memberKey(organizationId, user.id)] = status;
     this.write(database);
-    return { user, membership };
+    return { user, membership, status };
+  }
+
+  resendInvitation(organizationId: string, memberId: string): void {
+    const database = this.read();
+    this.requireManager(database, organizationId);
+    const membership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === memberId,
+    );
+    if (!membership || database.memberStatusByKey[memberKey(organizationId, memberId)] !== "invited") {
+      throw new Error("Only pending invitations can be resent.");
+    }
+  }
+
+  cancelInvitation(organizationId: string, memberId: string): void {
+    const database = this.read();
+    this.requireManager(database, organizationId);
+    const key = memberKey(organizationId, memberId);
+    if (database.memberStatusByKey[key] !== "invited") {
+      throw new Error("Only pending invitations can be cancelled.");
+    }
+    database.memberships = database.memberships.filter(
+      (item) => item.organizationId !== organizationId || item.userId !== memberId,
+    );
+    delete database.memberStatusByKey[key];
+    if (!database.memberships.some((item) => item.userId === memberId)) {
+      database.users = database.users.filter((item) => item.id !== memberId);
+    }
+    this.write(database);
+  }
+
+  revokeMember(organizationId: string, memberId: string): void {
+    const database = this.read();
+    const currentUserId = this.requireManager(database, organizationId);
+    const currentMembership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === currentUserId,
+    );
+    const membership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === memberId,
+    );
+    if (!membership || database.memberStatusByKey[memberKey(organizationId, memberId)] === "invited") {
+      throw new Error("Only active members can be revoked.");
+    }
+    if (membership.role === "owner") throw new Error("The workspace owner cannot be revoked.");
+    if (memberId === currentUserId) throw new Error("You cannot revoke your own access.");
+    if (currentMembership?.role === "admin" && membership.role !== "member") {
+      throw new Error("Admins can only revoke members.");
+    }
+    database.memberships = database.memberships.filter(
+      (item) => item.organizationId !== organizationId || item.userId !== memberId,
+    );
+    delete database.memberStatusByKey[memberKey(organizationId, memberId)];
+    this.write(database);
+  }
+
+  updateMemberRole(
+    organizationId: string,
+    memberId: string,
+    newRole: Exclude<MembershipRole, "owner">,
+  ): void {
+    const database = this.read();
+    const currentUserId = this.requireManager(database, organizationId);
+    const currentMembership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === currentUserId,
+    );
+    const targetMembership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === memberId,
+    );
+    if (!targetMembership) throw new Error("The workspace member could not be found.");
+    if (database.memberStatusByKey[memberKey(organizationId, memberId)] === "invited") {
+      throw new Error("Accept the invitation before changing this role.");
+    }
+    if (targetMembership.role === "owner") {
+      throw new Error("The owner role can only be changed by transferring ownership.");
+    }
+
+    if (currentMembership?.role === "owner") {
+      targetMembership.role = newRole;
+    } else if (
+      currentMembership?.role === "admin"
+      && memberId === currentUserId
+      && targetMembership.role === "admin"
+      && newRole === "member"
+    ) {
+      targetMembership.role = "member";
+    } else if (
+      currentMembership?.role === "admin"
+      && targetMembership.role === "member"
+      && newRole === "admin"
+    ) {
+      targetMembership.role = "admin";
+    } else {
+      throw new Error("Admins can promote members and demote only their own account.");
+    }
+    this.write(database);
+  }
+
+  transferOwnership(organizationId: string, newOwnerId: string): void {
+    const database = this.read();
+    const currentUserId = this.requireManager(database, organizationId);
+    const currentMembership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === currentUserId,
+    );
+    if (currentMembership?.role !== "owner") {
+      throw new Error("Only the workspace owner can transfer ownership.");
+    }
+    const newOwnerMembership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === newOwnerId,
+    );
+    if (!newOwnerMembership || newOwnerMembership.role !== "admin") {
+      throw new Error("Ownership can only be transferred to an active admin.");
+    }
+    if (database.memberStatusByKey[memberKey(organizationId, newOwnerId)] === "invited") {
+      throw new Error("The admin must accept the invitation before becoming owner.");
+    }
+    currentMembership.role = "admin";
+    newOwnerMembership.role = "owner";
+    this.write(database);
   }
 
   private workspaceFor(database: AccountDatabase, userId: string): AccountWorkspace {
@@ -254,11 +383,12 @@ export class LocalAccountWorkspaceRepository {
       if (!value) return emptyDatabase();
       const parsed = JSON.parse(value) as Partial<AccountDatabase>;
       return {
-        version: 1,
+        version: 2,
         ...(parsed.currentUserId ? { currentUserId: parsed.currentUserId } : {}),
         users: Array.isArray(parsed.users) ? parsed.users : [],
         organizations: Array.isArray(parsed.organizations) ? parsed.organizations : [],
         memberships: Array.isArray(parsed.memberships) ? parsed.memberships : [],
+        memberStatusByKey: parsed.memberStatusByKey ?? {},
         activeOrganizationByUser: parsed.activeOrganizationByUser ?? {},
       };
     } catch {
@@ -273,6 +403,17 @@ export class LocalAccountWorkspaceRepository {
     } catch {
       // The current in-memory UI remains usable when browser storage is restricted.
     }
+  }
+
+  private requireManager(database: AccountDatabase, organizationId: string): string {
+    const currentUserId = this.requireCurrentUser(database);
+    const membership = database.memberships.find(
+      (item) => item.organizationId === organizationId && item.userId === currentUserId,
+    );
+    if (!membership || membership.role === "member") {
+      throw new Error("Only owners and admins can manage members.");
+    }
+    return currentUserId;
   }
 }
 
