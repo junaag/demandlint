@@ -76,102 +76,6 @@ export const CANONICAL_FIELD_OPTIONS = Object.entries(CANONICAL_FIELD_LABELS).ma
   ([value, label]) => ({ value: value as CanonicalField, label }),
 );
 
-function column(
-  header: string,
-  field: CanonicalField,
-  required = false,
-): ExportTemplateColumn {
-  return {
-    id: `builtin-${header.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-    header,
-    source: { kind: "canonical", field },
-    ...(required ? { required: true } : {}),
-    format: "text",
-  };
-}
-
-function preset(
-  id: string,
-  name: string,
-  destinationType: string,
-  columns: ExportTemplateColumn[],
-): ExportTemplate {
-  return {
-    id,
-    name,
-    destinationType,
-    columns,
-    defaultFormat: "csv",
-    delimiter: ",",
-    sheetName: destinationType.slice(0, 31),
-    builtIn: true,
-  };
-}
-
-export const BUILT_IN_EXPORT_TEMPLATES: readonly ExportTemplate[] = [
-  preset("builtin-generic-crm", "Generic CRM contacts", "Generic CRM", [
-    column("First Name", "firstName"),
-    column("Last Name", "lastName"),
-    column("Company", "company"),
-    column("Job Title", "jobTitle"),
-    column("Email", "email", true),
-    column("Phone", "phone"),
-    column("Country", "country"),
-    column("Lead Source", "leadSource"),
-  ]),
-  preset("builtin-salesforce-leads", "Salesforce Leads", "Salesforce", [
-    column("First Name", "firstName"),
-    column("Last Name", "lastName", true),
-    column("Company", "company", true),
-    column("Title", "jobTitle"),
-    column("Email", "email"),
-    column("Phone", "phoneDirect"),
-    column("MobilePhone", "phoneMobile"),
-    column("Country", "country"),
-    column("LeadSource", "leadSource"),
-  ]),
-  preset("builtin-hubspot-contacts", "HubSpot Contacts", "HubSpot", [
-    column("First Name", "firstName"),
-    column("Last Name", "lastName"),
-    column("Company Name", "company"),
-    column("Job Title", "jobTitle"),
-    column("Email", "email", true),
-    column("Phone Number", "phone"),
-    column("Mobile Phone Number", "phoneMobile"),
-    column("Country/Region", "country"),
-    column("Original Source", "leadSource"),
-  ]),
-  preset("builtin-marketo-people", "Marketo People", "Marketo", [
-    column("First Name", "firstName"),
-    column("Last Name", "lastName"),
-    column("Email Address", "email", true),
-    column("Company Name", "company"),
-    column("Job Title", "jobTitle"),
-    column("Phone Number", "phoneDirect"),
-    column("Mobile Phone Number", "phoneMobile"),
-    column("Country", "country"),
-    column("Lead Source", "leadSource"),
-    {
-      id: "builtin-marketo-program-name",
-      header: "Program Name",
-      source: { kind: "parameter", key: "program_name", label: "Marketo program name" },
-      required: true,
-      format: "text",
-    },
-  ]),
-  preset("builtin-dynamics-leads", "Dynamics 365 Leads", "Microsoft Dynamics 365", [
-    column("First Name", "firstName"),
-    column("Last Name", "lastName", true),
-    column("Company Name", "company"),
-    column("Job Title", "jobTitle"),
-    column("Business Phone", "phoneDirect"),
-    column("Mobile Phone", "phoneMobile"),
-    column("Email", "email"),
-    column("Country/Region", "country"),
-    column("Lead Source", "leadSource"),
-  ]),
-] as const;
-
 function isEmpty(value: unknown): boolean {
   return value === null || value === undefined || String(value).trim() === "";
 }
@@ -288,6 +192,30 @@ export function cloneExportTemplate(template: ExportTemplate, overrides: Partial
 export function templateColumnId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `column_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+}
+
+export function exportTemplateId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `template_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+}
+
+export function createExportTemplateDraft(overrides: Partial<ExportTemplate> = {}): ExportTemplate {
+  return {
+    id: exportTemplateId(),
+    name: "New export template",
+    destinationType: "",
+    defaultFormat: "csv",
+    delimiter: ",",
+    sheetName: "Export",
+    columns: [{
+      id: templateColumnId(),
+      header: "Email",
+      source: { kind: "canonical", field: "email" },
+      required: true,
+      format: "text",
+    }],
+    ...overrides,
+  };
 }
 
 export function exportParameterColumns(template: ExportTemplate): ExportTemplateColumn[] {

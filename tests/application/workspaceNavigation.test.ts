@@ -8,6 +8,7 @@ import {
 describe("workspace navigation", () => {
   it("maps dedicated URLs to their workspace page", () => {
     expect(getWorkspacePage("?page=import")).toBe("import");
+    expect(getWorkspacePage("?page=templates")).toBe("templates");
     expect(getWorkspacePage("?page=settings")).toBe("settings");
   });
 
@@ -19,6 +20,7 @@ describe("workspace navigation", () => {
 
   it("builds reload-safe query URLs", () => {
     expect(workspacePageHref("settings", "/")).toBe("/?page=settings");
+    expect(workspacePageHref("templates", "/demandlint/")).toBe("/demandlint/?page=templates");
     expect(workspacePageHref("import", "/demandlint/")).toBe("/demandlint/?page=import");
   });
 });

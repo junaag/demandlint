@@ -60,11 +60,12 @@ export type {
   ExportValueMapping,
 } from "./exportTemplates";
 export {
-  BUILT_IN_EXPORT_TEMPLATES,
   CANONICAL_FIELD_LABELS,
   CANONICAL_FIELD_OPTIONS,
   buildTemplateExport,
   cloneExportTemplate,
+  createExportTemplateDraft,
+  exportTemplateId,
   exportParameterColumns,
   templateColumnId,
 } from "./exportTemplates";

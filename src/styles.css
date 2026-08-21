@@ -345,6 +345,18 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .icon-button.danger { color: #a8413a; }
 .icon-button.danger:hover { background: #fff1f0; }
 .empty-state { margin: 0; padding: 20px 24px; color: #7b8597; font-size: 13px; }
+.empty-state strong, .empty-state span { display: block; }
+.empty-state span { margin-top: 5px; }
+.templates-page-layout { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr); align-items: start; gap: 16px; }
+.templates-list-panel, .template-editor-panel { padding: 22px 24px; }
+.templates-list { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.templates-list li { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid #e5e8ee; }
+.templates-list strong, .templates-list span { display: block; }
+.templates-list span { margin-top: 4px; color: #7b8597; font-size: 12px; }
+.template-list-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.template-list-actions button { padding: 5px 7px; border: 0; border-radius: 6px; background: #f1f3f7; color: #40506b; font: inherit; font-size: 12px; cursor: pointer; }
+.template-list-actions .text-danger-button { background: transparent; }
+.template-editor-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
 .inline-error { margin: 12px 24px 0; color: #8c2e28; font-size: 12px; }
 
 .validation-bar { margin: 16px 0; display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 17px 20px; border-radius: 14px; border: 1px solid; }
@@ -686,7 +698,9 @@ footer { text-align: center; padding: 24px 20px 34px; color: #8a93a3; font-size:
   .legal-page { width: min(100% - 20px, 920px); padding: 10px 0 28px; }
   .legal-document { padding: 30px 20px 28px; border-radius: 17px; }
   .legal-navigation { align-items: flex-start; flex-direction: column; }
-  .settings-grid { grid-template-columns: 1fr; }
+  .settings-grid, .templates-page-layout { grid-template-columns: 1fr; }
+  .templates-list li { align-items: flex-start; flex-direction: column; }
+  .template-list-actions { justify-content: flex-start; }
   .template-save, .inline-form { display: grid; }
   .template-item { align-items: flex-start; padding: 14px 16px; }
   .template-item > div:first-child { align-items: flex-start; flex-direction: column; gap: 5px; }

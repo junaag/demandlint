@@ -52,6 +52,8 @@ import {
 import { AccountGate, type AccountMode } from "./components/AccountGate";
 import { DataHealthReview } from "./components/DataHealthReview";
 import { ExportPreparation } from "./components/ExportPreparation";
+import { ExportTemplatesPage } from "./components/ExportTemplatesPage";
+import { BuildInfo } from "./components/BuildInfo";
 import { FileSummary } from "./components/FileSummary";
 import { LegalPage } from "./components/LegalPage";
 import { MappingPanel } from "./components/MappingPanel";
@@ -473,6 +475,14 @@ export default function App() {
               navigateToPage("import");
             }}
           >Import</a>
+          <a
+            href={workspacePageHref("templates", window.location.pathname)}
+            className={page === "templates" ? "active" : ""}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToPage("templates");
+            }}
+          >Templates</a>
         </nav>
         <div className="account-controls">
           <select
@@ -515,6 +525,13 @@ export default function App() {
             onTransferOwnership={transferOwnership}
             hosted={hosted}
             {...(hosted ? { onDeleteAccount: deleteAccount } : {})}
+          />
+        ) : page === "templates" ? (
+          activeOrganizationId && <ExportTemplatesPage
+            templates={exportTemplates}
+            organizationId={activeOrganizationId}
+            onSave={saveExportTemplate}
+            onDelete={deleteExportTemplate}
           />
         ) : (
           <>
@@ -586,7 +603,6 @@ export default function App() {
                         templates={exportTemplates}
                         organizationId={activeOrganizationId}
                         onSave={saveExportTemplate}
-                        onDelete={deleteExportTemplate}
                       />
                     )}
                   </>
@@ -598,7 +614,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.3.0 · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
+        <BuildInfo /> · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
         <a href="?page=terms">Terms</a> · <a href="?page=privacy">Privacy</a>
       </footer>
     </div>

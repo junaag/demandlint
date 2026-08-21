@@ -1,5 +1,10 @@
 import type { DataExportFormat } from "./exportFileName";
-import { cloneExportTemplate, type ExportParameterValues, type ExportTemplate } from "./exportTemplates";
+import {
+  cloneExportTemplate,
+  createExportTemplateDraft,
+  type ExportParameterValues,
+  type ExportTemplate,
+} from "./exportTemplates";
 
 export type ExportPreparationMode = "custom" | "template";
 
@@ -25,7 +30,7 @@ export function createCustomExportDraft(startingTemplate: ExportTemplate): Expor
   });
 }
 
-export function createExportPreparationState(startingTemplate: ExportTemplate): ExportPreparationState {
+export function createExportPreparationState(startingTemplate: ExportTemplate = createExportTemplateDraft()): ExportPreparationState {
   const custom = createCustomExportDraft(startingTemplate);
   const template = cloneExportTemplate(startingTemplate, {
     id: startingTemplate.id,
@@ -43,4 +48,15 @@ export function selectExportPreparationMode(
   mode: ExportPreparationMode,
 ): ExportPreparationState {
   return { ...state, mode };
+}
+
+export function selectExportTemplate(
+  state: ExportPreparationState,
+  template: ExportTemplate,
+): ExportPreparationState {
+  const draft = cloneExportTemplate(template, { id: template.id, builtIn: false });
+  return {
+    ...state,
+    template: { draft, format: draft.defaultFormat, parameters: {} },
+  };
 }
