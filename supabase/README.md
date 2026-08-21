@@ -1,87 +1,250 @@
-# DemandLint hosted account setup
+# DemandLint — Supabase Hosted Control Plane
 
-DemandLint V0.2.2 uses Supabase only for the account control plane: authentication, profiles,
-organizations, memberships, contact preferences and mapping templates. CSV/XLSX lead files and
-their processed rows stay in the browser and are not written to Supabase.
+Current application baseline: **V0.3.0**
 
-## 1. Create the Free project
+Supabase is used for DemandLint's hosted **control plane**:
 
-Create a Supabase Free project for DemandLint. Keep the project password and every secret key in
-the Supabase dashboard or another secret manager; do not add them to this repository.
+- passwordless authentication;
+- profiles;
+- organizations/workspaces;
+- memberships and invitations;
+- contact preferences;
+- source mapping templates;
+- destination export templates.
 
-## 2. Apply the database migration
+Uploaded CSV/TSV/XLSX/XLS lead files, parsed rows, canonical leads, quality issues, previews and generated export contents stay in the browser and are intentionally absent from the Supabase schema.
 
-Open **SQL Editor** in the Supabase dashboard, paste the complete contents of
-`migrations/20260820_000001_hosted_accounts.sql`, and run it once.
+## Security boundary
 
-The migration creates the multi-tenant tables, RPC functions and Row Level Security policies. It
-also creates a first organization when a user registers and accepts matching organization invites
-when an invited address registers later.
+The browser uses only a public/publishable Supabase project key. Row Level Security and narrowly scoped database functions/RPCs are the authorization boundary.
 
-## 3. Configure passwordless email OTP
+Never place any of the following in a `VITE_*` variable or browser code:
 
-For projects created on the Free plan after June 3, 2026, Supabase requires a custom SMTP provider
-before authentication email templates can be customized. Configure that provider first in
-**Authentication → SMTP Settings**.
+- Supabase service-role/secret key;
+- database password;
+- SMTP credentials;
+- Resend API key;
+- OAuth client secret.
 
-Then edit the magic-link/confirmation template in **Authentication → Email Templates** so the
-message shows the numeric token using:
+Client-side owner/admin/member checks are UX controls only and must never replace database authorization.
 
-```html
-<p>Your DemandLint verification code is:</p>
-<h2>{{ .Token }}</h2>
-<p>This code can only be used once.</p>
+## Current production migration sequence
+
+Apply migrations in repository order:
+
+```text
+supabase/migrations/20260820_000001_hosted_accounts.sql
+supabase/migrations/20260820_000002_member_management.sql
+supabase/migrations/20260820_000003_workspace_role_management.sql
+supabase/migrations/20260820_000004_account_deletion_permissions.sql
+supabase/migrations/20260821_000005_export_templates.sql
 ```
 
-The application verifies a 6-digit token. Do not leave the template as a link-only message. If no
-custom SMTP provider is configured, use the magic-link variant of DemandLint instead of deploying
-this OTP form.
+### 000001 — Hosted accounts
 
-## 4. Configure allowed URLs
+Creates the initial multi-tenant control plane:
 
-In **Authentication → URL Configuration**, set:
+- `organizations`
+- `profiles`
+- `organization_memberships`
+- `organization_invitations`
+- `contact_preferences`
+- `mapping_templates`
+- helper functions, trigger logic and RLS policies.
 
-- Site URL: `https://demandlint.com`
-- Production redirect: `https://demandlint.com/**`
-- Legacy GitHub Pages redirect: `https://junaag.github.io/demandlint/**`
-- Local development redirect: `http://localhost:5173/**`
+New users receive a profile and either accept matching pending invitations or receive an initial organization/workspace.
 
-The GitHub Pages URL stays temporarily allowed so an in-flight session still works while DNS and
-the custom domain certificate propagate.
+### 000002 — Member management
 
-## 5. Configure the GitHub Pages build
+Adds the hosted member/invitation lifecycle operations needed by workspace administration and invitation delivery.
 
-In **GitHub → demandlint → Settings → Secrets and variables → Actions → Variables**, add:
+### 000003 — Workspace role management
 
-- `VITE_SUPABASE_URL`: the project URL from **Project Settings → API**
-- `VITE_SUPABASE_PUBLISHABLE_KEY`: the browser-safe publishable key from the same page
-- `VITE_AUTH_GOOGLE_ENABLED`: `false`
-- `VITE_AUTH_MICROSOFT_ENABLED`: `false`
+Adds the owner/admin/member hierarchy and atomic ownership-transfer behavior.
 
-The publishable key is designed for browser clients; RLS is the actual authorization boundary.
-Never use the `service_role` key in a `VITE_` variable or browser code.
+### 000004 — Account deletion permissions
 
-For local development, copy `.env.example` to `.env.local` and fill in the same browser-safe
-values. `.env.local` is ignored by Git.
+Hardens account deletion permissions.
 
-## 6. Verify before enabling OAuth
+### 000005 — Export templates
 
-Register with a test work email, enter the received 6-digit code, sign out, and sign in again.
-Verify organization switching, invitations, preference sync and mapping-template sync in a second
-browser session.
+Adds organization-scoped `export_templates` with RLS and authenticated CRUD for organization members.
 
-Google and Microsoft buttons stay disabled until their OAuth applications and Supabase providers
-are configured. Enable each corresponding GitHub variable only after its full OAuth flow passes.
+Only reusable template metadata is stored in `config jsonb`; lead rows and generated outputs remain browser-local.
 
-## 7. Configure workspace invitation email
+## Migration discipline
 
-The `organization-invitations` Edge Function sends transactional workspace invitations through
-Resend. Add these Edge Function secrets before deploying it:
+These migrations represent production history. Treat applied migrations as immutable.
 
-- `RESEND_API_KEY`: a Resend API key allowed to send from `demandlint.com`
-- `RESEND_FROM_EMAIL`: `DemandLint <auth@demandlint.com>`
-- `DEMANDLINT_APP_URL`: `https://demandlint.com`
+For a future schema change:
 
-Deploy `migrations/20260820_000002_member_management.sql`, then deploy the function with JWT
-verification enabled. Invitation links use `demandlint.com` and open a prefilled registration or
-login page; DemandLint then sends the usual 6-digit authentication code.
+1. create a new migration with the Supabase CLI rather than inventing/reusing an old migration filename;
+2. review tenant isolation and the security checklist;
+3. ensure every table exposed through the Data API has appropriate grants and RLS;
+4. verify `SELECT`, `INSERT`, `UPDATE` and `DELETE` behavior for the intended roles;
+5. test a user from another organization cannot access the new rows;
+6. run database/security advisors where available;
+7. apply the migration explicitly to production;
+8. update this README and `docs/data-model.md` / `docs/current-state.md`.
+
+Do not assume a GitHub Pages frontend deployment applies database migrations.
+
+## Passwordless work-email authentication
+
+DemandLint's current production account flow is a one-time code sent to the user's work email.
+
+The browser adapter uses Supabase Auth and verifies the numeric OTP. The production Supabase project must therefore have email delivery/templates configured so the authentication email presents the expected verification code.
+
+When changing Auth configuration, validate the complete production flow rather than only the button/UI state:
+
+```text
+register
+→ receive code
+→ verify code
+→ profile/workspace loads
+→ sign out
+→ sign in again
+→ session/workspace restores correctly
+```
+
+## Allowed application URLs
+
+The hosted project should permit the application's expected environments, including:
+
+- production: `https://demandlint.com`
+- legacy GitHub Pages URL while it remains supported
+- local development: `http://localhost:5173`
+
+Keep redirect URLs synchronized with any future routing/domain change.
+
+## Browser configuration
+
+For local development:
+
+```bash
+cp .env.example .env.local
+```
+
+Required browser-safe variables:
+
+```text
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_AUTH_GOOGLE_ENABLED=false
+VITE_AUTH_MICROSOFT_ENABLED=false
+```
+
+The deployment workflow currently supplies the corresponding production browser configuration.
+
+The publishable key is intended for public clients; RLS is still required for authorization.
+
+## Google / Microsoft authentication
+
+Integration hooks and feature flags exist, but the current production flags are disabled.
+
+Do not set either flag to `true` simply because a button/provider exists in code. Enable a provider only after:
+
+1. creating/configuring the external OAuth application;
+2. configuring the matching Supabase Auth provider;
+3. validating redirect URLs;
+4. testing account creation and returning-user sign-in;
+5. testing organization/invitation behavior for OAuth-created sessions;
+6. confirming logout/session recovery;
+7. validating the production flow on `demandlint.com`.
+
+Enterprise OIDC/SAML SSO remains outside the approved V1 scope unless reprioritized.
+
+## Workspace invitation Edge Function
+
+Function:
+
+```text
+supabase/functions/organization-invitations/
+```
+
+It sends transactional workspace invitation email through Resend.
+
+Server-side secrets required by the function include:
+
+```text
+RESEND_API_KEY
+RESEND_FROM_EMAIL
+DEMANDLINT_APP_URL
+```
+
+Expected production values include an application URL of `https://demandlint.com` and an authorized sender on the DemandLint domain.
+
+Never move the Resend API key into frontend code.
+
+After changing invitation logic, validate:
+
+- owner/admin authorization;
+- invitation creation;
+- delivery;
+- resend;
+- cancellation;
+- invited-user registration/login;
+- membership acceptance;
+- access revocation;
+- cross-organization isolation.
+
+## Role model
+
+Current workspace roles:
+
+- `owner`
+- `admin`
+- `member`
+
+The database enforces the role/ownership lifecycle. Important product behavior includes:
+
+- owner can manage admins/members;
+- ownership can be transferred atomically to an active admin;
+- former owner becomes admin after transfer;
+- admin cannot modify/revoke another admin;
+- database preserves a single owner per organization.
+
+Do not relax server-side rules merely to simplify a UI action.
+
+## RLS validation checklist
+
+For every organization-scoped table, verify with two separate users/organizations:
+
+- user A can read only organizations they belong to;
+- user A cannot read organization B's configuration by guessing its UUID;
+- inserts cannot target an unauthorized organization;
+- updates cannot move a row into another organization;
+- deletes cannot remove another organization's rows;
+- anonymous access is denied where not intended;
+- privileged functions independently check authenticated identity/role.
+
+For `UPDATE`, remember that the access model requires the row to be selectable as well as passing the update checks.
+
+## Data that must remain outside Supabase
+
+Unless a future ADR explicitly changes the architecture, do not persist:
+
+- uploaded lead files;
+- raw file rows;
+- canonical leads;
+- email/phone values from imported records;
+- Data Health row issues;
+- Ready/Review/Blocked datasets;
+- destination preview rows;
+- generated CSV/XLS/XLSX data.
+
+Reusable configuration and account metadata may synchronize; customer lead content does not.
+
+## V1 hardening requirements
+
+Before V1, Supabase-related work should focus on evidence rather than adding platform breadth:
+
+- cross-organization RLS regression checks;
+- owner/admin/member lifecycle validation;
+- invitation flow validation;
+- auth/session recovery tests;
+- migration parity/documentation;
+- privacy-safe operational diagnostics;
+- no P0/P1 security defects.
+
+Direct CRM credentials/connectors and enterprise SSO remain post-V1 unless product priority changes.
