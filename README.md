@@ -46,6 +46,22 @@ Column recognition currently includes common EN / FR / ES / PT lead-export heade
 - GitHub Pages deployment
 - Supabase Auth + Postgres control plane with Row Level Security
 
+## Development handover
+
+Taking over the project with Codex/ChatGPT or as a new developer? Start here:
+
+1. [`AGENTS.md`](AGENTS.md) — coding-agent rules and architecture invariants
+2. [`docs/handover.md`](docs/handover.md) — setup, deployment and first-day checklist
+3. [`docs/current-state.md`](docs/current-state.md) — implemented / partial / planned / gap matrix
+4. [`docs/product.md`](docs/product.md) — current product specification
+5. [`docs/architecture.md`](docs/architecture.md) — current architecture and data boundaries
+6. [`docs/data-model.md`](docs/data-model.md) — browser and Supabase data model
+7. [`docs/export-templates.md`](docs/export-templates.md) — destination-template semantics
+8. [`docs/roadmap.md`](docs/roadmap.md) — approved V0.4 → V1 sequence
+9. [`docs/decisions.md`](docs/decisions.md) — binding decisions and scope constraints
+
+Current handover baseline: **V0.3.0**, merge commit `c928442ba0256236e5ebfd88d514439b8971efc2`.
+
 ## Architecture direction
 
 V0.1.1 prepares DemandLint for future SaaS capabilities without coupling them to the cleaning engine:
@@ -64,6 +80,11 @@ V0.2.2 replaces the browser-only account preview with Supabase passwordless auth
 Row-Level-Security-protected multi-tenant database. Profiles, memberships, preferences and mapping
 templates synchronize across devices, while raw lead files and processed lead rows remain local to
 the browser.
+
+V0.3.0 adds independent organization-scoped destination export templates while preserving the same
+browser-local lead-data boundary. The current V1 roadmap is reliability-first: hardening, self-service
+UX, reusable Recipes, privacy-safe observability, validation and a release-candidate phase come before
+multi-source UI, direct CRM connectors or enterprise SSO.
 
 ## Release status
 
@@ -86,6 +107,6 @@ Completed:
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 
-The V0.1 user test protocol is documented in `docs/user-test-v0.1.md` and tracked in GitHub issue #12.
+The original V0.1 user test protocol is documented in `docs/user-test-v0.1.md` and tracked in GitHub issue #12. The V1 roadmap evolves that validation into a broader real-file and multi-user program.
 
 Product and architecture decisions live in `docs/`.

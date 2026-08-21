@@ -1,0 +1,6 @@
+Prénom,Nom,Correo electrónico,Email personnel,Entreprise,Poste,Portable,Téléphone standard,Pays,Lead Source
+ Alice ,MARTIN,ALICE.MARTIN@EXAMPLE.TEST,alice.personal@example.test,Acme France,Marketing Manager,06 12 34 56 78,01 44 55 66 77,France,Event
+Bruno,Silva,bruno.silva@example.test,,Example Iberia,Demand Gen,+351 912 345 678,,Portugal,Partner
+Carla,Rossi,not-an-email,carla.rossi@example.test,Demo Italia,Marketing Ops,+39 340 123 4567,,Italy,Webinar
+Diego,Lopez,diego.lopez@example.test,,Sample España,RevOps,612345678,,Spain,Event
+Eva,Dupont,alice.martin@example.test,,Acme France,Field Marketing,0033 6 98 76 54 32,,France,Event
