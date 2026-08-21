@@ -1,5 +1,5 @@
 import { parseCsvBytes } from "../csv/parseCsv";
-import { parseXlsxBytes } from "../xlsx/parseXlsx";
+import { parseSpreadsheetBytes } from "../xlsx/parseXlsx";
 import { TableParseError, type LocalTableFile, type ParsedTable } from "./domain";
 
 export interface TableParseOptions {
@@ -17,16 +17,20 @@ export async function parseTableFile(
 ): Promise<ParsedTable> {
   const extension = extensionOf(file.name);
 
-  if (extension === ".csv") {
+  if (extension === ".csv" || extension === ".tsv") {
     return parseCsvBytes(file.bytes, file.name);
   }
 
   if (extension === ".xlsx") {
-    return parseXlsxBytes(file.bytes, file.name, options);
+    return parseSpreadsheetBytes(file.bytes, file.name, "xlsx", options);
+  }
+
+  if (extension === ".xls") {
+    return parseSpreadsheetBytes(file.bytes, file.name, "xls", options);
   }
 
   throw new TableParseError(
     "UNSUPPORTED_FILE_TYPE",
-    `Unsupported file type '${extension || "unknown"}'. DemandLint currently accepts .csv and .xlsx files.`,
+    `Unsupported file type '${extension || "unknown"}'. DemandLint accepts .csv, .tsv, .xlsx and .xls files.`,
   );
 }

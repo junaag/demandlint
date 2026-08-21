@@ -49,3 +49,22 @@ export {
   runtimeMappingFromSourceMapping,
   sourceMappingFromRuntime,
 } from "./mapping/contracts";
+export type {
+  ExportColumnSource,
+  ExportDatePattern,
+  ExportParameterValues,
+  ExportTemplate,
+  ExportTemplateColumn,
+  ExportValidationIssue,
+  ExportValueFormat,
+  ExportValueMapping,
+} from "./exportTemplates";
+export {
+  BUILT_IN_EXPORT_TEMPLATES,
+  CANONICAL_FIELD_LABELS,
+  CANONICAL_FIELD_OPTIONS,
+  buildTemplateExport,
+  cloneExportTemplate,
+  exportParameterColumns,
+  templateColumnId,
+} from "./exportTemplates";

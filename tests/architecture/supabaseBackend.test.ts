@@ -18,6 +18,9 @@ const roleManagementMigrationPath = fileURLToPath(
 const accountDeletionPermissionMigrationPath = fileURLToPath(
   new URL("../../supabase/migrations/20260820_000004_account_deletion_permissions.sql", import.meta.url),
 );
+const exportTemplatesMigrationPath = fileURLToPath(
+  new URL("../../supabase/migrations/20260821_000005_export_templates.sql", import.meta.url),
+);
 
 describe("Supabase hosted account boundary", () => {
   it("enables RLS on every exposed DemandLint table", () => {
@@ -90,5 +93,14 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain(
       "grant execute on function public.delete_current_account() to authenticated",
     );
+  });
+
+  it("stores only export-template metadata behind organization RLS", () => {
+    const migration = readFileSync(exportTemplatesMigrationPath, "utf8");
+    expect(migration).toContain("create table public.export_templates");
+    expect(migration).toContain("alter table public.export_templates enable row level security;");
+    expect(migration).toContain("private.is_organization_member(organization_id)");
+    expect(migration).toContain("grant select, insert, update, delete on public.export_templates to authenticated;");
+    expect(migration).not.toMatch(/create table public\.(leads|imports|lead_rows|processed_rows)/i);
   });
 });

@@ -1,9 +1,9 @@
-import readExcelFile from "read-excel-file/universal";
 import {
   evaluateLeadTableColumns,
   selectBestWorkbookSheetIndex,
 } from "../../application/import/selectWorkbookSheet";
 import type { RawRow } from "../../core/domain";
+import type { TableSourceType } from "../../application/import/domain";
 import {
   TableParseError,
   type ParsedTable,
@@ -45,10 +45,10 @@ interface SheetCandidate {
 
 const MAX_HEADER_SCAN_ROWS = 50;
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  return copy.buffer;
+function hasExpectedFileSignature(bytes: Uint8Array, sourceType: "xlsx" | "xls"): boolean {
+  if (sourceType === "xlsx") return bytes[0] === 0x50 && bytes[1] === 0x4b;
+  const oleSignature = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+  return oleSignature.every((value, index) => bytes[index] === value);
 }
 
 function hasMeaningfulValue(row: SheetRow): boolean {
@@ -141,7 +141,12 @@ function rowToRawRow(row: SheetRow, columns: HeaderColumn[]): RawRow | undefined
   return hasValue ? output : undefined;
 }
 
-function buildSheetCandidate(sheet: WorkbookSheet, index: number, fileName: string): SheetCandidate {
+function buildSheetCandidate(
+  sheet: WorkbookSheet,
+  index: number,
+  fileName: string,
+  sourceType: TableSourceType,
+): SheetCandidate {
   const header = findBestHeaderRow(sheet.data);
   if (!header) {
     return {
@@ -183,7 +188,7 @@ function buildSheetCandidate(sheet: WorkbookSheet, index: number, fileName: stri
       rows,
       metadata: {
         fileName,
-        sourceType: "xlsx",
+        sourceType,
         rowCount: rows.length,
         columnCount: header.columns.length,
         headerRowNumber: header.index + 1,
@@ -209,27 +214,50 @@ function selectAutomaticSheet(candidates: SheetCandidate[]): SheetCandidate | un
   return usableCandidates.find((candidate) => candidate.summary.index === selectedIndex);
 }
 
-export async function parseXlsxBytes(
+export async function parseSpreadsheetBytes(
   bytes: Uint8Array,
-  fileName = "upload.xlsx",
+  fileName: string,
+  sourceType: "xlsx" | "xls",
   options: XlsxParseOptions = {},
 ): Promise<ParsedTable> {
   if (bytes.byteLength === 0) {
-    throw new TableParseError("EMPTY_FILE", "XLSX file is empty.");
+    throw new TableParseError("EMPTY_FILE", `${sourceType.toUpperCase()} file is empty.`);
+  }
+  if (!hasExpectedFileSignature(bytes, sourceType)) {
+    throw new TableParseError(
+      sourceType === "xls" ? "INVALID_XLS" : "INVALID_XLSX",
+      `${sourceType.toUpperCase()} file signature is invalid.`,
+    );
   }
 
   let sheets: WorkbookSheet[];
   try {
-    sheets = await readExcelFile(toArrayBuffer(bytes)) as WorkbookSheet[];
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(bytes, { type: "array", cellDates: true, dense: true });
+    sheets = workbook.SheetNames.map((sheetName) => ({
+      sheet: sheetName,
+      data: XLSX.utils.sheet_to_json<SheetRow>(workbook.Sheets[sheetName]!, {
+        header: 1,
+        raw: true,
+        defval: null,
+        blankrows: true,
+      }),
+    }));
   } catch (error) {
-    throw new TableParseError("INVALID_XLSX", "XLSX file could not be parsed.", { cause: error });
+    throw new TableParseError(
+      sourceType === "xls" ? "INVALID_XLS" : "INVALID_XLSX",
+      `${sourceType.toUpperCase()} file could not be parsed.`,
+      { cause: error },
+    );
   }
 
   if (sheets.length === 0) {
     throw new TableParseError("EMPTY_SHEET", "XLSX workbook does not contain a worksheet.");
   }
 
-  const candidates = sheets.map((sheet, index) => buildSheetCandidate(sheet, index, fileName));
+  const candidates = sheets.map((sheet, index) => (
+    buildSheetCandidate(sheet, index, fileName, sourceType)
+  ));
   const selected = options.sheetName
     ? candidates.find((candidate) => candidate.sheet.sheet === options.sheetName)
     : selectAutomaticSheet(candidates);
@@ -237,15 +265,15 @@ export async function parseXlsxBytes(
   if (options.sheetName && !selected) {
     throw new TableParseError(
       "UNKNOWN_SHEET",
-      `XLSX workbook does not contain a worksheet named '${options.sheetName}'.`,
+      `${sourceType.toUpperCase()} workbook does not contain a worksheet named '${options.sheetName}'.`,
     );
   }
   if (!selected?.table) {
     throw new TableParseError(
       "NO_HEADER_ROW",
       options.sheetName
-        ? `XLSX worksheet '${options.sheetName}' does not contain a usable header row.`
-        : "XLSX workbook does not contain a worksheet with a usable header row.",
+        ? `${sourceType.toUpperCase()} worksheet '${options.sheetName}' does not contain a usable header row.`
+        : `${sourceType.toUpperCase()} workbook does not contain a worksheet with a usable header row.`,
     );
   }
 
@@ -265,4 +293,12 @@ export async function parseXlsxBytes(
     },
     warnings,
   };
+}
+
+export function parseXlsxBytes(
+  bytes: Uint8Array,
+  fileName = "upload.xlsx",
+  options: XlsxParseOptions = {},
+): Promise<ParsedTable> {
+  return parseSpreadsheetBytes(bytes, fileName, "xlsx", options);
 }

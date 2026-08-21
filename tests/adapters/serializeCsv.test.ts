@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { serializeCsv } from "../../src/adapters/export/serializeCsv";
+import { serializeCsv, serializeDelimited } from "../../src/adapters/export/serializeCsv";
 
 describe("serializeCsv", () => {
   it("preserves requested column order and utf-8 text", () => {
@@ -27,5 +27,15 @@ describe("serializeCsv", () => {
     );
 
     expect(csv).toBe("email,company\r\n,");
+  });
+});
+
+describe("configurable delimited exports", () => {
+  it("supports semicolon CSV and TSV while escaping the active delimiter", () => {
+    const columns = [{ key: "name" }, { key: "note" }];
+    expect(serializeDelimited(columns, [{ name: "Alice", note: "one;two" }], ";"))
+      .toBe('name;note\r\nAlice;"one;two"');
+    expect(serializeDelimited(columns, [{ name: "Alice", note: "one\ttwo" }], "\t"))
+      .toBe('name\tnote\r\nAlice\t"one\ttwo"');
   });
 });

@@ -6,7 +6,7 @@ DemandLint is a local-first data quality tool for Demand Generation, Field Marke
 
 The first module focuses on **lead import quality**:
 
-> Upload a CSV/XLSX lead file → map fields → normalize → validate → deduplicate → review → export CRM-ready data.
+> Upload a CSV/TSV/XLSX/XLS lead file → map fields → normalize → validate → deduplicate → review → prepare an exact CRM-ready export.
 
 ## Product principles
 
@@ -20,7 +20,7 @@ The first module focuses on **lead import quality**:
 ## Current workflow
 
 1. Register or sign in with a one-time code sent to your work email
-2. Upload CSV/XLSX (the best lead worksheet is selected automatically in multi-sheet workbooks)
+2. Upload CSV/TSV/XLSX/XLS (the best lead worksheet is selected automatically in multi-sheet workbooks)
 3. Confirm the worksheet when relevant, then detect and map columns
 4. Save or apply organization-specific source mapping templates
 5. Classify multiple emails and phones by role
@@ -28,7 +28,8 @@ The first module focuses on **lead import quality**:
 7. Normalize phone numbers to Salesforce-compatible E.164 values
 8. Validate required fields, contact quality and duplicates
 9. Review Ready / Review / Blocked rows
-10. Export `clean.csv` and `review.csv`, with primary-only or complete contact fields
+10. Choose or build a destination template with exact headers, column order, constants, prompted values, blanks, fallbacks and safe value mappings
+11. Preview and validate the exact output, then export CSV, semicolon CSV, TSV, XLSX or true legacy XLS
 
 Column recognition currently includes common EN / FR / ES / PT lead-export headers.
 
@@ -81,6 +82,7 @@ Completed:
 - V0.2.1 — work-email-only registration, separate returning-user login, redesigned authentication UI and legal pages
 - V0.2.2 — hosted passwordless accounts, secure organization workspaces, invitations and cross-device configuration sync
 - V0.2.3 — transactional workspace invitations, member lifecycle controls and hierarchical role/ownership management
+- V0.3.0 — independent destination templates, exact output preview, prompted/common values and CSV/TSV/XLSX/XLS import-export support
 
 A deliberately imperfect sample file is available at `public/sample-leads.csv`.
 

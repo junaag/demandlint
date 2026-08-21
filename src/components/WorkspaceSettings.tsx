@@ -264,7 +264,7 @@ export function WorkspaceSettings({
       </section>
 
       <div className="preview-notice">
-        <strong>{hosted ? "V0.2.3 hosted workspace" : "Local development preview"}</strong>
+        <strong>{hosted ? "V0.3.0 hosted workspace" : "Local development preview"}</strong>
         <span>
           {hosted
             ? "Your account, organizations, preferences and mapping templates are synchronized securely across devices. Lead files still remain in this browser."

@@ -132,6 +132,19 @@ claim secure authentication or cross-device synchronization.
 - owner/admin/member role management;
 - atomic ownership transfer from the current owner to an active admin.
 
+## V0.3.0 — Destination-ready exports
+
+- keep source mappings independent from destination export templates;
+- add a fourth Prepare export step with an exact five-row preview and required-field validation;
+- create, update and delete organization-scoped export templates;
+- define exact headers and column order, including deliberately empty columns;
+- source cells from DemandLint fields, custom fields, fixed values or values requested for each export;
+- support fallbacks, safe value mappings and text/date/date-time/number/boolean formatting;
+- create a template from the structure of a CSV, TSV, XLSX or XLS sample file;
+- include conservative Salesforce, HubSpot, Marketo and Dynamics presets;
+- import true legacy XLS and export CSV, semicolon CSV, TSV, XLSX and true BIFF8 XLS;
+- keep reusable template metadata in Supabase while all lead rows remain browser-local.
+
 ## Next: validation-driven releases
 
 ### Product feedback / UX hardening
@@ -142,7 +155,6 @@ Use real event lead files and capture defects before expanding scope. Add browse
 
 - secure Google and Microsoft sign-in;
 - custom roles and workspace audit history;
-- cross-device destination mapping templates;
 - team-level recipes.
 
 ### Multi-source imports
