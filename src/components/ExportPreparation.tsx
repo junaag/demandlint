@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type SetStateAction } from "react";
 import {
   BUILT_IN_EXPORT_TEMPLATES,
   CANONICAL_FIELD_OPTIONS,
@@ -18,6 +18,11 @@ import {
 import type { DataExportFormat } from "../application/exportFileName";
 import { downloadTemplateExport } from "../composition/browserExport";
 import { createExportTemplateFromSample } from "../composition/browserExportTemplates";
+import {
+  createExportPreparationState,
+  selectExportPreparationMode,
+  type ExportPreparationMode,
+} from "../application/exportPreparationWorkflow";
 
 interface ExportPreparationProps {
   result: ProcessedDataset;
@@ -65,6 +70,15 @@ function mappingText(column: ExportTemplateColumn): string {
   return column.valueMappings?.map((item) => `${item.from}=${item.to}`).join("; ") ?? "";
 }
 
+function sourceLabel(column: ExportTemplateColumn): string {
+  const source = column.source;
+  if (source.kind === "canonical") return CANONICAL_FIELD_OPTIONS.find((item) => item.value === source.field)?.label ?? source.field;
+  if (source.kind === "custom") return `Custom field: ${source.key || "not set"}`;
+  if (source.kind === "constant") return `Fixed value: ${source.value || "empty"}`;
+  if (source.kind === "parameter") return `Asked at export: ${source.label}`;
+  return "Always empty";
+}
+
 export function ExportPreparation({
   result,
   templates,
@@ -73,11 +87,11 @@ export function ExportPreparation({
   onDelete,
 }: ExportPreparationProps) {
   const allTemplates = useMemo(() => [...BUILT_IN_EXPORT_TEMPLATES, ...templates], [templates]);
-  const [draft, setDraft] = useState<ExportTemplate>(() => copyTemplate(BUILT_IN_EXPORT_TEMPLATES[0]!));
-  const [format, setFormat] = useState<DataExportFormat>(draft.defaultFormat);
-  const [parameters, setParameters] = useState<ExportParameterValues>({});
+  const [workflow, setWorkflow] = useState(() => createExportPreparationState(BUILT_IN_EXPORT_TEMPLATES[0]!));
   const [busy, setBusy] = useState<"save" | "delete" | "sample" | "download" | null>(null);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const active = workflow[workflow.mode];
+  const { draft, format, parameters } = active;
   const parameterColumns = useMemo(() => exportParameterColumns(draft), [draft]);
   const output = useMemo(
     () => buildTemplateExport(draft, result.ready, parameters),
@@ -86,13 +100,39 @@ export function ExportPreparation({
   const previewRows = output.rows.slice(0, 5);
   const uniqueIssues = [...new Map(output.issues.map((issue) => [issue.message, issue])).values()];
 
+  function changeMode(mode: ExportPreparationMode) {
+    setWorkflow((current) => selectExportPreparationMode(current, mode));
+    setMessage(null);
+  }
+
+  function setDraft(update: SetStateAction<ExportTemplate>) {
+    setWorkflow((current) => {
+      const activeDraft = current[current.mode].draft;
+      const nextDraft = typeof update === "function" ? update(activeDraft) : update;
+      return { ...current, [current.mode]: { ...current[current.mode], draft: nextDraft } };
+    });
+  }
+
+  function setFormat(format: DataExportFormat) {
+    setWorkflow((current) => ({ ...current, [current.mode]: { ...current[current.mode], format } }));
+  }
+
+  function setParameters(update: SetStateAction<ExportParameterValues>) {
+    setWorkflow((current) => {
+      const activeParameters = current[current.mode].parameters;
+      const nextParameters = typeof update === "function" ? update(activeParameters) : update;
+      return { ...current, [current.mode]: { ...current[current.mode], parameters: nextParameters } };
+    });
+  }
+
   function selectTemplate(id: string) {
     const selected = allTemplates.find((template) => template.id === id);
     if (!selected) return;
     const next = copyTemplate(selected);
-    setDraft(next);
-    setFormat(next.defaultFormat);
-    setParameters({});
+    setWorkflow((current) => ({
+      ...current,
+      template: { draft: next, format: next.defaultFormat, parameters: {} },
+    }));
     setMessage(null);
   }
 
@@ -131,7 +171,10 @@ export function ExportPreparation({
     setMessage(null);
     try {
       const saved = await onSave({ ...draft, organizationId, defaultFormat: format });
-      setDraft(copyTemplate(saved));
+      setWorkflow((current) => ({
+        ...current,
+        custom: { ...current.custom, draft: copyTemplate(saved) },
+      }));
       setMessage({ kind: "success", text: "Export template saved for this workspace." });
     } catch (caught) {
       setMessage({ kind: "error", text: caught instanceof Error ? caught.message : "The template could not be saved." });
@@ -141,10 +184,11 @@ export function ExportPreparation({
   }
 
   async function deleteTemplate() {
-    if (draft.builtIn || !window.confirm(`Delete '${draft.name}'?`)) return;
+    const selected = workflow.template.draft;
+    if (selected.builtIn || !window.confirm(`Delete '${selected.name}'?`)) return;
     setBusy("delete");
     try {
-      await onDelete(draft.id);
+      await onDelete(selected.id);
       selectTemplate(BUILT_IN_EXPORT_TEMPLATES[0]!.id);
       setMessage({ kind: "success", text: "Export template deleted." });
     } catch (caught) {
@@ -162,9 +206,11 @@ export function ExportPreparation({
     setMessage(null);
     try {
       const imported = await createExportTemplateFromSample(file);
-      setDraft(imported);
-      setFormat(imported.defaultFormat);
-      setParameters({});
+      setWorkflow((current) => ({
+        ...current,
+        mode: "custom",
+        custom: { draft: imported, format: imported.defaultFormat, parameters: {} },
+      }));
       setMessage({ kind: "success", text: `Template created from ${file.name}. Review the suggested sources before saving.` });
     } catch (caught) {
       setMessage({ kind: "error", text: caught instanceof Error ? caught.message : "The sample file could not be read." });
@@ -192,32 +238,17 @@ export function ExportPreparation({
         <div>
           <p className="section-label">PREPARE EXPORT</p>
           <h2 id="prepare-export-title">Match the exact file your destination expects</h2>
-          <p>Choose a preset or build a reusable workspace template. Lead data stays in this browser.</p>
+          <p>Choose how to prepare this export. Lead data stays in this browser.</p>
         </div>
-        <div className="template-source-actions">
-          <label>
-            <span>Destination template</span>
-            <select value={draft.id} onChange={(event) => selectTemplate(event.target.value)}>
-              {!allTemplates.some((template) => template.id === draft.id) && (
-                <option value={draft.id}>Unsaved draft · {draft.name}</option>
-              )}
-              <optgroup label="Built-in presets">
-                {BUILT_IN_EXPORT_TEMPLATES.map((template) => (
-                  <option key={template.id} value={template.id}>{template.name}</option>
-                ))}
-              </optgroup>
-              {templates.length > 0 && <optgroup label="Workspace templates">
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>{template.name}</option>
-                ))}
-              </optgroup>}
-            </select>
-          </label>
-          <label className="button secondary sample-template-button">
-            {busy === "sample" ? "Reading…" : "Create from sample file"}
-            <input className="visually-hidden" type="file" accept=".csv,.tsv,.xlsx,.xls" onChange={(event) => void importSample(event)} />
-          </label>
-        </div>
+      </div>
+
+      <div className="export-mode-choice" role="group" aria-label="Export preparation mode">
+        <button className={workflow.mode === "custom" ? "mode-choice active" : "mode-choice"} type="button" onClick={() => changeMode("custom")} aria-pressed={workflow.mode === "custom"}>
+          <strong>Custom export</strong><span>Choose the format and configure the exact columns to export.</span>
+        </button>
+        <button className={workflow.mode === "template" ? "mode-choice active" : "mode-choice"} type="button" onClick={() => changeMode("template")} aria-pressed={workflow.mode === "template"}>
+          <strong>Use a template</strong><span>Start from a saved or built-in destination configuration.</span>
+        </button>
       </div>
 
       {message && (
@@ -227,15 +258,34 @@ export function ExportPreparation({
         </div>
       )}
 
+      {workflow.mode === "template" && <div className="template-source-actions">
+        <label>
+          <span>Destination template</span>
+          <select value={draft.id} onChange={(event) => selectTemplate(event.target.value)}>
+            <optgroup label="Built-in presets">
+              {BUILT_IN_EXPORT_TEMPLATES.map((template) => (
+                <option key={template.id} value={template.id}>{template.name}</option>
+              ))}
+            </optgroup>
+            {templates.length > 0 && <optgroup label="Workspace templates">
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>{template.name}</option>
+              ))}
+            </optgroup>}
+          </select>
+        </label>
+      </div>}
+
+      {workflow.mode === "custom" && <>
       <div className="export-template-meta">
-        <label><span>Template name</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+        <label><span>Export name</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
         <label><span>Destination</span><input value={draft.destinationType} onChange={(event) => setDraft({ ...draft, destinationType: event.target.value })} /></label>
         <label><span>Worksheet name</span><input maxLength={31} value={draft.sheetName ?? ""} onChange={(event) => setDraft({ ...draft, sheetName: event.target.value })} /></label>
       </div>
 
       <div className="export-column-builder">
         <div className="export-column-builder-heading">
-          <div><h3>Output columns</h3><p>Order is exact. Empty sources keep the column and leave every cell blank.</p></div>
+          <div><h3>Included output columns</h3><p>Order is exact. Remove columns to exclude them; empty sources keep the column and leave every cell blank.</p></div>
           <button className="button ghost" type="button" onClick={() => setDraft((current) => ({
             ...current,
             columns: [...current.columns, {
@@ -292,6 +342,18 @@ export function ExportPreparation({
           </article>
         ))}
       </div>
+      <div className="custom-template-actions">
+        <label className="button secondary sample-template-button">
+          {busy === "sample" ? "Reading…" : "Create from sample file"}
+          <input className="visually-hidden" type="file" accept=".csv,.tsv,.xlsx,.xls" onChange={(event) => void importSample(event)} />
+        </label>
+      </div>
+      </>}
+
+      {workflow.mode === "template" && <div className="template-configuration">
+        <div><h3>Template configuration</h3><p>{draft.destinationType}{draft.sheetName ? ` · Worksheet: ${draft.sheetName}` : ""}</p></div>
+        <ol>{draft.columns.map((column) => <li key={column.id}><strong>{column.header || "(blank header)"}</strong><span>{sourceLabel(column)}</span></li>)}</ol>
+      </div>}
 
       {parameterColumns.length > 0 && <div className="export-parameters">
         <div><h3>Values for this export</h3><p>These values apply to every exported row and are not saved unless set as a prompt default.</p></div>
@@ -313,8 +375,8 @@ export function ExportPreparation({
 
       <div className="prepare-export-actions">
         <div className="template-management-actions">
-          <button className="button secondary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveTemplate()}>{busy === "save" ? "Saving…" : draft.builtIn ? "Save as workspace template" : "Save template"}</button>
-          {!draft.builtIn && <button className="text-danger-button" type="button" disabled={busy !== null} onClick={() => void deleteTemplate()}>{busy === "delete" ? "Deleting…" : "Delete template"}</button>}
+          {workflow.mode === "custom" && <button className="button secondary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveTemplate()}>{busy === "save" ? "Saving…" : "Save as workspace template"}</button>}
+          {workflow.mode === "template" && !draft.builtIn && <button className="text-danger-button" type="button" disabled={busy !== null} onClick={() => void deleteTemplate()}>{busy === "delete" ? "Deleting…" : "Delete template"}</button>}
         </div>
         <div className="download-ready-actions">
           <label><span>File format</span><select value={format} onChange={(event) => setFormat(event.target.value as DataExportFormat)}>{FORMAT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
