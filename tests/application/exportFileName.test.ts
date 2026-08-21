@@ -11,6 +11,8 @@ describe("export file names", () => {
     expect(formatExportTimestamp(exportedAt)).toBe("202608211214");
     expect(buildExportFileName("clean", "csv", exportedAt)).toBe("clean-202608211214.csv");
     expect(buildExportFileName("review", "xlsx", exportedAt)).toBe("review-202608211214.xlsx");
+    expect(buildExportFileName("clean", "csv-semicolon", exportedAt)).toBe("clean-202608211214.csv");
+    expect(buildExportFileName("clean", "xls", exportedAt)).toBe("clean-202608211214.xls");
   });
 
   it("pads midnight hours and minutes", () => {

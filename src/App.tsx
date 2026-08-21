@@ -7,6 +7,7 @@ import {
   type CanonicalField,
   type ContactPreferences,
   DEFAULT_CONTACT_PREFERENCES,
+  type ExportTemplate,
   type ImportSession,
   type MappingTemplate,
   type MembershipRole,
@@ -43,8 +44,14 @@ import {
   mappingFromBrowserTemplate,
   saveBrowserMappingTemplate,
 } from "./composition/browserMappingTemplates";
+import {
+  deleteBrowserExportTemplate,
+  listBrowserExportTemplates,
+  saveBrowserExportTemplate,
+} from "./composition/browserExportTemplates";
 import { AccountGate, type AccountMode } from "./components/AccountGate";
 import { DataHealthReview } from "./components/DataHealthReview";
+import { ExportPreparation } from "./components/ExportPreparation";
 import { FileSummary } from "./components/FileSummary";
 import { LegalPage } from "./components/LegalPage";
 import { MappingPanel } from "./components/MappingPanel";
@@ -92,6 +99,7 @@ export default function App() {
     DEFAULT_CONTACT_PREFERENCES,
   );
   const [mappingTemplates, setMappingTemplates] = useState<MappingTemplate[]>([]);
+  const [exportTemplates, setExportTemplates] = useState<ExportTemplate[]>([]);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const publicRoute = getPublicRoute();
   const hosted = isHostedAccountBackendConfigured();
@@ -149,6 +157,7 @@ export default function App() {
   useEffect(() => {
     if (!activeOrganizationId) {
       setMappingTemplates([]);
+      setExportTemplates([]);
       setMembers([]);
       return;
     }
@@ -157,12 +166,14 @@ export default function App() {
       loadBrowserContactPreferences(activeOrganizationId),
       listBrowserOrganizationMembers(activeOrganizationId),
       listBrowserMappingTemplates(activeOrganizationId),
+      listBrowserExportTemplates(activeOrganizationId),
     ])
-      .then(([preferences, nextMembers, templates]) => {
+      .then(([preferences, nextMembers, templates, nextExportTemplates]) => {
         if (cancelled) return;
         setContactPreferences(preferences);
         setMembers(nextMembers);
         setMappingTemplates(templates);
+        setExportTemplates(nextExportTemplates);
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
@@ -366,6 +377,19 @@ export default function App() {
     setMappingTemplates(await listBrowserMappingTemplates(activeOrganizationId));
   }
 
+  async function saveExportTemplate(template: ExportTemplate): Promise<ExportTemplate> {
+    if (!activeOrganizationId) throw new Error("Open a workspace before saving a template.");
+    const saved = await saveBrowserExportTemplate(template, activeOrganizationId);
+    setExportTemplates(await listBrowserExportTemplates(activeOrganizationId));
+    return saved;
+  }
+
+  async function deleteExportTemplate(id: string): Promise<void> {
+    if (!activeOrganizationId) return;
+    await deleteBrowserExportTemplate(id);
+    setExportTemplates(await listBrowserExportTemplates(activeOrganizationId));
+  }
+
   function reset() {
     setSession(null);
     setUploadedFile(null);
@@ -498,7 +522,7 @@ export default function App() {
               <p className="eyebrow">CRM IMPORT PRE-FLIGHT</p>
               <h1>Catch bad lead data before it reaches your CRM.</h1>
               <p>
-                Upload a CSV or XLSX file, confirm the field mapping, then run DemandLint’s
+                Upload a CSV, XLSX or XLS file, confirm the field mapping, then run DemandLint’s
                 deterministic quality checks directly in your browser.
               </p>
             </section>
@@ -506,7 +530,8 @@ export default function App() {
             <nav className="steps" aria-label="Import workflow">
               <div className={`step ${table ? "complete" : "active"}`}><span>1</span>Upload</div>
               <div className={`step ${table && !result ? "active" : result ? "complete" : ""}`}><span>2</span>Map fields</div>
-              <div className={`step ${result ? "active" : ""}`}><span>3</span>Review & export</div>
+              <div className={`step ${result ? "complete" : ""}`}><span>3</span>Review</div>
+              <div className={`step ${result ? "active" : ""}`}><span>4</span>Prepare export</div>
             </nav>
 
             {error && <div className="alert error-alert" role="alert">{error}</div>}
@@ -553,7 +578,18 @@ export default function App() {
                 </section>
 
                 {result && (
-                  <DataHealthReview result={result} contactPreferences={contactPreferences} />
+                  <>
+                    <DataHealthReview result={result} />
+                    {activeOrganizationId && (
+                      <ExportPreparation
+                        result={result}
+                        templates={exportTemplates}
+                        organizationId={activeOrganizationId}
+                        onSave={saveExportTemplate}
+                        onDelete={deleteExportTemplate}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -562,7 +598,7 @@ export default function App() {
       </main>
 
       <footer>
-        DemandLint V0.2.3 · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
+        DemandLint V0.3.0 · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
         <a href="?page=terms">Terms</a> · <a href="?page=privacy">Privacy</a>
       </footer>
     </div>

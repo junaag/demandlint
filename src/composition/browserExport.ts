@@ -1,6 +1,7 @@
 import { downloadTextFile } from "../adapters/browser/downloadTextFile";
 import { downloadXlsxFile } from "../adapters/browser/downloadXlsxFile";
-import { serializeCsv, type CsvColumn } from "../adapters/export/serializeCsv";
+import { downloadXlsFile } from "../adapters/browser/downloadXlsFile";
+import { serializeDelimited, type CsvColumn } from "../adapters/export/serializeCsv";
 import {
   buildExportFileName,
   type DataExportFormat,
@@ -13,6 +14,11 @@ import {
 } from "../application/qualityReview";
 import type { ProcessedDataset } from "../application/public";
 import type { ContactExportMode } from "../core/domain";
+import {
+  buildTemplateExport,
+  type ExportParameterValues,
+  type ExportTemplate,
+} from "../application/exportTemplates";
 
 const TYPED_CONTACT_FIELDS = new Set([
   "emailProfessional",
@@ -31,6 +37,36 @@ function cleanColumns(exportMode: ContactExportMode): CsvColumn[] {
 
 const REVIEW_COLUMNS: CsvColumn[] = REVIEW_EXPORT_COLUMNS.map((field) => ({ key: field }));
 
+function delimiterFor(format: DataExportFormat, fallback: "," | ";" | "\t" = ","): "," | ";" | "\t" {
+  if (format === "tsv") return "\t";
+  if (format === "csv-semicolon") return ";";
+  return fallback;
+}
+
+async function downloadRows<T extends object>(
+  fileName: string,
+  sheetName: string,
+  columns: readonly CsvColumn[],
+  rows: readonly T[],
+  format: DataExportFormat,
+  delimiter: "," | ";" | "\t" = ",",
+): Promise<void> {
+  if (format === "xlsx") {
+    await downloadXlsxFile(fileName, sheetName, columns, rows);
+    return;
+  }
+  if (format === "xls") {
+    await downloadXlsFile(fileName, sheetName, columns, rows);
+    return;
+  }
+  const actualDelimiter = delimiterFor(format, delimiter);
+  downloadTextFile(
+    fileName,
+    serializeDelimited(columns, rows, actualDelimiter),
+    actualDelimiter === "\t" ? "text/tab-separated-values;charset=utf-8" : "text/csv;charset=utf-8",
+  );
+}
+
 export async function downloadCleanExport(
   result: ProcessedDataset,
   exportMode: ContactExportMode = "all",
@@ -40,12 +76,7 @@ export async function downloadCleanExport(
   const rows = buildCleanExportRows(result);
   const fileName = buildExportFileName("clean", format);
 
-  if (format === "xlsx") {
-    await downloadXlsxFile(fileName, "Clean", columns, rows);
-    return;
-  }
-
-  downloadTextFile(fileName, serializeCsv(columns, rows));
+  await downloadRows(fileName, "Clean", columns, rows, format);
 }
 
 export async function downloadReviewExport(
@@ -55,10 +86,26 @@ export async function downloadReviewExport(
   const rows = buildReviewExportRows(result);
   const fileName = buildExportFileName("review", format);
 
-  if (format === "xlsx") {
-    await downloadXlsxFile(fileName, "Review", REVIEW_COLUMNS, rows);
-    return;
-  }
+  await downloadRows(fileName, "Review", REVIEW_COLUMNS, rows, format);
+}
 
-  downloadTextFile(fileName, serializeCsv(REVIEW_COLUMNS, rows));
+export async function downloadTemplateExport(
+  result: ProcessedDataset,
+  template: ExportTemplate,
+  parameters: ExportParameterValues,
+  format: DataExportFormat,
+): Promise<void> {
+  const output = buildTemplateExport(template, result.ready, parameters);
+  if (output.issues.length > 0) {
+    throw new Error(output.issues[0]?.message ?? "The export template is not valid.");
+  }
+  const fileName = buildExportFileName("clean", format);
+  await downloadRows(
+    fileName,
+    template.sheetName?.trim() || "Clean",
+    output.columns,
+    output.rows,
+    format,
+    template.delimiter ?? ",",
+  );
 }

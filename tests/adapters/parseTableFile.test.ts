@@ -49,10 +49,23 @@ describe("table file dispatcher", () => {
     expect(result.metadata.sheetSelection).toBe("manual");
   });
 
+  it("routes legacy XLS files to the spreadsheet adapter", async () => {
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["First Name", "Email"],
+      ["Alice", "alice@example.com"],
+    ]), "Leads");
+    const output = XLSX.write(workbook, { type: "array", bookType: "biff8" });
+    const bytes = output instanceof Uint8Array ? output : new Uint8Array(output as ArrayBuffer);
+    const result = await parseTableFile({ name: "event.xls", bytes });
+    expect(result.metadata.sourceType).toBe("xls");
+  });
+
   it("rejects unsupported file types explicitly", async () => {
     await expect(
       parseTableFile({
-        name: "event.xls",
+        name: "event.ods",
         bytes: new Uint8Array([1, 2, 3]),
       }),
     ).rejects.toMatchObject({

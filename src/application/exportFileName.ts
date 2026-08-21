@@ -1,5 +1,9 @@
 export type DataExportKind = "clean" | "review";
-export type DataExportFormat = "csv" | "xlsx";
+export type DataExportFormat = "csv" | "csv-semicolon" | "tsv" | "xlsx" | "xls";
+
+export function exportFileExtension(format: DataExportFormat): "csv" | "tsv" | "xlsx" | "xls" {
+  return format === "csv-semicolon" ? "csv" : format;
+}
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
@@ -20,5 +24,5 @@ export function buildExportFileName(
   format: DataExportFormat,
   exportedAt = new Date(),
 ): string {
-  return `${kind}-${formatExportTimestamp(exportedAt)}.${format}`;
+  return `${kind}-${formatExportTimestamp(exportedAt)}.${exportFileExtension(format)}`;
 }

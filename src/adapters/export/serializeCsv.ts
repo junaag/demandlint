@@ -3,11 +3,11 @@ export interface CsvColumn {
   header?: string;
 }
 
-function escapeCsvValue(value: unknown): string {
+function escapeDelimitedValue(value: unknown, delimiter: string): string {
   if (value === null || value === undefined) return "";
 
-  const text = String(value);
-  if (!/[",\r\n]/.test(text)) return text;
+  const text = value instanceof Date ? value.toISOString() : String(value);
+  if (!text.includes(delimiter) && !/["\r\n]/.test(text)) return text;
   return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -15,14 +15,26 @@ function cellValue(row: object, key: string): unknown {
   return (row as Record<string, unknown>)[key];
 }
 
+export function serializeDelimited<T extends object>(
+  columns: readonly CsvColumn[],
+  rows: readonly T[],
+  delimiter: "," | ";" | "\t",
+): string {
+  const header = columns
+    .map((column) => escapeDelimitedValue(column.header ?? column.key, delimiter))
+    .join(delimiter);
+  const body = rows.map((row) =>
+    columns
+      .map((column) => escapeDelimitedValue(cellValue(row, column.key), delimiter))
+      .join(delimiter),
+  );
+
+  return [header, ...body].join("\r\n");
+}
+
 export function serializeCsv<T extends object>(
   columns: readonly CsvColumn[],
   rows: readonly T[],
 ): string {
-  const header = columns.map((column) => escapeCsvValue(column.header ?? column.key)).join(",");
-  const body = rows.map((row) =>
-    columns.map((column) => escapeCsvValue(cellValue(row, column.key))).join(","),
-  );
-
-  return [header, ...body].join("\r\n");
+  return serializeDelimited(columns, rows, ",");
 }

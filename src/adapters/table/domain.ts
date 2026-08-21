@@ -11,6 +11,7 @@ export type TableParseErrorCode =
   | "UNSUPPORTED_FILE_TYPE"
   | "INVALID_CSV"
   | "INVALID_XLSX"
+  | "INVALID_XLS"
   | "NO_HEADER_ROW"
   | "EMPTY_SHEET"
   | "UNKNOWN_SHEET";

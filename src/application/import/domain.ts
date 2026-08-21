@@ -1,7 +1,7 @@
 import type { ColumnMapping, ProcessedDataset, RawRow } from "../../core/domain";
 import type { MappingPlan } from "../../core/mapping/domain";
 
-export type TableSourceType = "csv" | "xlsx";
+export type TableSourceType = "csv" | "xlsx" | "xls";
 
 export interface WorkbookSheetMetadata {
   name: string;

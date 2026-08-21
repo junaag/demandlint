@@ -130,6 +130,47 @@
 .export-actions .button span { margin-left: 5px; min-width: 20px; display: inline-grid; place-items: center; border-radius: 999px; padding: 2px 6px; background: rgba(255, 255, 255, .22); font-size: 10px; }
 .button.secondary span { background: #dfe4eb; }
 
+.export-preparation { overflow: hidden; }
+.export-preparation > .section-heading { align-items: flex-end; }
+.template-source-actions { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.template-source-actions > label:first-child { display: grid; gap: 6px; min-width: 250px; color: #667287; font-size: 11px; font-weight: 800; }
+.sample-template-button { cursor: pointer; white-space: nowrap; }
+.inline-notice { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 24px 18px; padding: 11px 13px; border: 1px solid #b9ddc4; border-radius: 10px; background: #effaf2; color: #28603a; font-size: 12px; }
+.inline-notice.error { border-color: #efbbb6; background: #fff2f1; color: #923b34; }
+.inline-notice button { border: 0; background: transparent; color: currentColor; font-size: 21px; line-height: 1; cursor: pointer; }
+.export-template-meta { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; padding: 0 24px 22px; }
+.export-template-meta label, .export-column-fields label, .parameter-grid label, .download-ready-actions label { display: grid; gap: 6px; color: #667287; font-size: 10px; font-weight: 850; text-transform: uppercase; letter-spacing: .035em; }
+.export-column-builder { border-top: 1px solid #e8ebf1; border-bottom: 1px solid #e8ebf1; background: #f9fafc; padding: 22px 24px; }
+.export-column-builder-heading, .export-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.export-column-builder h3, .export-parameters h3, .export-preview-block h3 { margin: 0; font-size: 16px; }
+.export-column-builder p, .export-parameters p, .export-preview-block p { margin: 4px 0 0; color: #7a8496; font-size: 11px; }
+.export-column-card { position: relative; display: grid; grid-template-columns: 72px minmax(0, 1fr) auto 28px; gap: 12px; align-items: end; margin-top: 9px; padding: 13px; border: 1px solid #dfe4ed; border-radius: 11px; background: #fff; }
+.column-order { display: flex; align-items: center; gap: 4px; align-self: center; }
+.column-order strong { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: #eef1ff; color: #5364cc; font-size: 11px; }
+.column-order button { width: 20px; height: 25px; padding: 0; border: 1px solid #dce1ea; border-radius: 6px; background: white; color: #627087; cursor: pointer; }
+.column-order button:disabled { opacity: .35; cursor: default; }
+.export-column-fields { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+.export-column-fields .value-map-field { grid-column: span 2; }
+.export-column-fields input, .export-column-fields select, .export-template-meta input, .parameter-grid input { padding: 8px 9px; font-size: 11px; }
+.required-toggle { align-self: center; display: flex; align-items: center; gap: 5px; color: #536078; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.required-toggle input { width: auto; }
+.icon-danger-button, .text-danger-button { border: 0; background: transparent; color: #a6443d; cursor: pointer; }
+.icon-danger-button { align-self: center; font-size: 23px; }
+.text-danger-button { font-size: 11px; font-weight: 800; text-decoration: underline; }
+.export-parameters { display: grid; grid-template-columns: minmax(220px, .8fr) 2fr; gap: 24px; padding: 22px 24px; border-bottom: 1px solid #e8ebf1; background: #fffaf0; }
+.parameter-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 10px; }
+.export-preview-block { padding: 22px 24px; border-bottom: 1px solid #e8ebf1; }
+.validation-count { padding: 5px 8px; border-radius: 999px; background: #fff0ee; color: #963e36; font-size: 10px; font-weight: 850; }
+.export-validation-list { margin: 0 0 13px; padding: 10px 10px 10px 29px; border-radius: 9px; background: #fff4f2; color: #8f3c35; font-size: 11px; }
+.export-preview-table-wrap { overflow: auto; max-height: 290px; border: 1px solid #e1e5ed; border-radius: 10px; }
+.export-preview-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; }
+.export-preview-table th { position: sticky; top: 0; padding: 9px 11px; border-right: 1px solid #dce2ed; background: #e8edff; color: #34415a; text-align: left; white-space: nowrap; }
+.export-preview-table td { max-width: 240px; padding: 8px 11px; border-top: 1px solid #edf0f4; border-right: 1px solid #edf0f4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prepare-export-actions { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 20px 24px; }
+.template-management-actions, .download-ready-actions { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.download-ready-actions { justify-content: flex-end; }
+.download-ready-actions label { min-width: 180px; }
+
 @media (max-width: 940px) {
   .health-metrics { grid-template-columns: repeat(4, 1fr); }
   .review-toolbar { align-items: flex-start; flex-direction: column; }
@@ -137,6 +178,11 @@
   .export-panel { align-items: flex-start; flex-direction: column; }
   .export-controls { width: 100%; min-width: 0; justify-items: start; }
   .export-actions { justify-content: flex-start; }
+  .export-column-fields { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+  .export-template-meta { grid-template-columns: 1fr 1fr; }
+  .export-template-meta label:first-child { grid-column: 1 / -1; }
+  .prepare-export-actions { align-items: stretch; flex-direction: column; }
+  .download-ready-actions { justify-content: flex-start; }
 }
 
 @media (max-width: 660px) {
@@ -155,4 +201,13 @@
   .export-format-label { width: 100%; justify-content: space-between; }
   .export-actions { width: 100%; }
   .export-actions .button { width: 100%; }
+  .template-source-actions, .template-source-actions > label:first-child { width: 100%; }
+  .export-template-meta, .export-column-fields, .parameter-grid { grid-template-columns: 1fr; }
+  .export-template-meta label:first-child, .export-column-fields .value-map-field { grid-column: auto; }
+  .export-column-builder, .export-preview-block, .export-parameters, .prepare-export-actions { padding-right: 16px; padding-left: 16px; }
+  .export-column-card { grid-template-columns: 1fr 28px; align-items: start; }
+  .column-order { grid-column: 1 / -1; }
+  .required-toggle { grid-column: 1; }
+  .export-parameters { grid-template-columns: 1fr; }
+  .template-management-actions, .download-ready-actions, .download-ready-actions label, .download-ready-actions .button { width: 100%; }
 }
