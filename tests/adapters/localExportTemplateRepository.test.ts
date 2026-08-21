@@ -11,8 +11,8 @@ class MemoryStorage {
 const template: ExportTemplate = {
   id: "one",
   organizationId: "org-a",
-  name: "Salesforce",
-  destinationType: "Salesforce",
+  name: "Event import",
+  destinationType: "Events platform",
   defaultFormat: "csv",
   columns: [{ id: "email", header: "Email", source: { kind: "canonical", field: "email" } }],
 };
@@ -21,10 +21,10 @@ describe("local export template repository", () => {
   it("isolates, updates and deletes workspace templates", async () => {
     const repository = new LocalExportTemplateRepository(new MemoryStorage());
     await repository.save(template);
-    await repository.save({ ...template, name: "Salesforce Leads" });
+    await repository.save({ ...template, name: "Event import v2" });
     await repository.save({ ...template, id: "two", organizationId: "org-b" });
     expect(await repository.listForOrganization("org-a")).toHaveLength(1);
-    expect((await repository.getById("one"))?.name).toBe("Salesforce Leads");
+    expect((await repository.getById("one"))?.name).toBe("Event import v2");
     await repository.delete("one");
     expect(await repository.listForOrganization("org-a")).toEqual([]);
   });

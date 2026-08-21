@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTemplateExport,
+  cloneExportTemplate,
+  createExportTemplateDraft,
   type ExportTemplate,
 } from "../../src/application/exportTemplates";
 import type { CanonicalLead } from "../../src/core/domain";
@@ -76,5 +78,14 @@ describe("destination export templates", () => {
       }],
     }, [lead]);
     expect(output.rows[0]).toEqual({ column_0: "08/21/2026" });
+  });
+
+  it("creates independent manual templates while preserving exact column order", () => {
+    const manual = createExportTemplateDraft({ name: "My CRM import" });
+    const duplicate = cloneExportTemplate(manual, { id: "duplicate", name: "My CRM import copy" });
+
+    expect(manual.columns.map((column) => column.header)).toEqual(["Email"]);
+    expect(duplicate.columns.map((column) => column.header)).toEqual(["Email"]);
+    expect(duplicate.columns[0]?.id).not.toBe(manual.columns[0]?.id);
   });
 });

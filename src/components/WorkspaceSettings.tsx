@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { BuildInfo } from "./BuildInfo";
 import type {
   AccountWorkspace,
   ContactPreferences,
@@ -264,7 +265,7 @@ export function WorkspaceSettings({
       </section>
 
       <div className="preview-notice">
-        <strong>{hosted ? "V0.3.0 hosted workspace" : "Local development preview"}</strong>
+        <strong><BuildInfo /> · {hosted ? "Hosted workspace" : "Local development preview"}</strong>
         <span>
           {hosted
             ? "Your account, organizations, preferences and mapping templates are synchronized securely across devices. Lead files still remain in this browser."

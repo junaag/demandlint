@@ -18,7 +18,6 @@ describe("ExportPreparation", () => {
         templates={[]}
         organizationId="org-1"
         onSave={async (template) => template}
-        onDelete={async () => undefined}
       />,
     );
 
