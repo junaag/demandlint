@@ -26,7 +26,7 @@ const template: ExportTemplate = {
   columns: [
     { id: "1", header: "Email Address", source: { kind: "canonical", field: "email" }, required: true },
     { id: "2", header: "Program Name", source: { kind: "parameter", key: "program", label: "Program" }, required: true },
-    { id: "3", header: "Member Status", source: { kind: "constant", value: "Member" } },
+    { id: "3", header: "Member Status", source: { kind: "parameter", key: "status", label: "Status", defaultValue: "Member" } },
     { id: "4", header: "Reserved", source: { kind: "empty" } },
     { id: "5", header: "Lead Source", source: { kind: "canonical", field: "leadSource" }, valueMappings: [{ from: "EVENT", to: "Event" }] },
     { id: "6", header: "Score", source: { kind: "custom", key: "score" }, format: "number" },
@@ -34,7 +34,7 @@ const template: ExportTemplate = {
 };
 
 describe("destination export templates", () => {
-  it("builds exact ordered columns with constants, parameters, blanks and mappings", () => {
+  it("builds exact ordered columns with fixed values, blanks and mappings", () => {
     const output = buildTemplateExport(template, [lead], { program: "FY27 Roadshow" });
 
     expect(output.issues).toEqual([]);
