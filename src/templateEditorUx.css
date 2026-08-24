@@ -3,7 +3,7 @@
 
 .export-template-editor { display: grid; gap: 22px; }
 .export-template-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.export-template-meta > label { display: grid; gap: 5px; min-width: 0; }
+.export-template-meta > label { display: grid; grid-template-rows: min-content minmax(2.1rem, auto) 40px; align-content: start; min-width: 0; }
 .export-template-meta > label > span, .export-column-fields > label > span, .optional-rules label > span {
   color: #46536b;
   font-size: .82rem;
@@ -20,6 +20,9 @@
   line-height: 1.35;
   text-transform: none;
 }
+.export-template-meta > label > span { grid-row: 1; }
+.export-template-meta > label > small { grid-row: 2; padding-top: 3px; }
+.export-template-meta > label > input, .export-template-meta > label > select { grid-row: 3; }
 .export-template-editor input, .export-template-editor select { min-height: 40px; font-size: .9rem; }
 .export-column-builder { display: grid; gap: 12px; }
 .export-column-builder-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
@@ -28,9 +31,8 @@
 
 .export-column-card { overflow: hidden; border: 1px solid #dfe4ec; border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(27, 39, 68, .03); }
 .export-column-card-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 12px; border-bottom: 1px solid #e8ebf0; background: #fafbfc; }
-.column-order { display: flex; align-items: center; gap: 9px; min-width: 0; color: #25324a; }
+.column-order { display: flex; align-items: center; gap: 5px; min-width: 0; color: #25324a; }
 .column-order strong { display: grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center; border-radius: 7px; background: #eaf0ff; color: #4058c5; font-size: .78rem; }
-.column-order span { overflow: hidden; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .column-card-actions { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
 .column-action-button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #4b5b75; font-size: 1.05rem; line-height: 1; cursor: pointer; }
 .column-action-button:hover:not(:disabled) { border-color: #d7deea; background: #fff; color: #25324a; }
@@ -38,7 +40,7 @@
 .column-action-button.danger { color: #a8413a; font-size: 1.25rem; }
 .column-action-button.danger:hover { border-color: #f0d1ce; background: #fff3f1; }
 
-.export-column-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 16px 14px 12px; }
+.export-column-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 16px 14px; }
 .export-column-fields > label { display: grid; grid-template-rows: min-content minmax(2.1rem, auto) 40px; align-content: start; min-width: 0; }
 .export-column-fields > label > span { grid-row: 1; }
 .export-column-fields > label > small { grid-row: 2; padding-top: 3px; }
@@ -51,9 +53,7 @@
 .optional-rules label { display: grid; grid-template-rows: min-content minmax(2.1rem, auto) 40px; min-width: 0; }
 .optional-rules label > small { padding-top: 3px; }
 .optional-rules label > input, .optional-rules label > select { align-self: end; }
-.export-column-card-footer { display: flex; align-items: center; min-height: 45px; padding: 0 14px; border-top: 1px solid #edf0f4; }
-.required-toggle { display: inline-flex; align-items: center; gap: 8px; color: #46536b; font-size: .82rem; font-weight: 650; }
-.required-toggle input { width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: #4c63d2; }
+.required-toggle input { justify-self: start; width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: #4c63d2; }
 
 .template-structure-preview > h2 { margin: 0; font-size: 1.08rem; }
 .template-structure-preview > p:not(.section-label) { margin: 5px 0 0; color: #718096; font-size: .82rem; line-height: 1.4; }
@@ -77,5 +77,4 @@
   .export-column-card-header { padding: 10px; }
   .export-column-fields { padding: 14px 10px 10px; }
   .optional-rules { margin-right: -10px; margin-left: -10px; padding-right: 10px; padding-left: 10px; }
-  .export-column-card-footer { padding: 0 10px; }
 }

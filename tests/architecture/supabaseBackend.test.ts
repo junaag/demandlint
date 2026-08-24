@@ -21,6 +21,9 @@ const accountDeletionPermissionMigrationPath = fileURLToPath(
 const exportTemplatesMigrationPath = fileURLToPath(
   new URL("../../supabase/migrations/20260821_000005_export_templates.sql", import.meta.url),
 );
+const optionalDestinationMigrationPath = fileURLToPath(
+  new URL("../../supabase/migrations/20260824_000006_export_templates_optional_destination.sql", import.meta.url),
+);
 
 describe("Supabase hosted account boundary", () => {
   it("enables RLS on every exposed DemandLint table", () => {
@@ -102,5 +105,12 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain("private.is_organization_member(organization_id)");
     expect(migration).toContain("grant select, insert, update, delete on public.export_templates to authenticated;");
     expect(migration).not.toMatch(/create table public\.(leads|imports|lead_rows|processed_rows)/i);
+  });
+
+  it("allows an optional destination while retaining its non-empty length validation", () => {
+    const migration = readFileSync(optionalDestinationMigrationPath, "utf8");
+    expect(migration).toContain("alter column destination_type drop not null");
+    expect(migration).toContain("destination_type is null");
+    expect(migration).toContain("char_length(trim(destination_type)) between 1 and 120");
   });
 });
