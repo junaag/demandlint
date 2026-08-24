@@ -1,0 +1,8 @@
+.templates-page-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
+.export-template-editor small, .optional-rules small { display: block; color: var(--text-muted); font-size: .78rem; margin: .2rem 0; }
+.optional-rules { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: .65rem; }
+.optional-rules summary { cursor: pointer; font-weight: 650; margin-bottom: .6rem; }
+.optional-rules label { display: block; margin: .55rem 0; }
+.template-structure-preview { overflow-x: auto; }
+.template-structure-preview table { width: 100%; border-collapse: collapse; margin: .75rem 0; }
+.template-structure-preview th, .template-structure-preview td { border: 1px solid var(--border); padding: .6rem; text-align: left; white-space: nowrap; }
