@@ -75,7 +75,7 @@ export function ExportTemplateEditor({ template, onChange, heading = "Template c
 
       <div className="export-column-builder">
         <div className="export-column-builder-heading">
-          <div><h3>{heading}</h3><p>Column order is exact. Empty keeps the column but leaves every cell blank.</p></div>
+          <div><h3>{heading}</h3><p>Column order is exact. Leave empty keeps the column but leaves every cell blank.</p></div>
           <button className="button ghost" type="button" onClick={() => onChange({ ...template, columns: [...template.columns, { id: templateColumnId(), header: "New column", source: { kind: "empty" }, format: "text" }] })}>Add column</button>
         </div>
         {template.columns.map((column, index) => (

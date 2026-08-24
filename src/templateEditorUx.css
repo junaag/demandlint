@@ -19,6 +19,9 @@
   font-weight: 400;
   line-height: 1.35;
   text-transform: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 .export-template-meta > label > span { grid-row: 1; }
 .export-template-meta > label > small { grid-row: 2; padding-top: 3px; }
@@ -40,8 +43,8 @@
 .column-action-button.danger { color: #a8413a; font-size: 1.25rem; }
 .column-action-button.danger:hover { border-color: #f0d1ce; background: #fff3f1; }
 
-.export-column-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 16px 14px; }
-.export-column-fields > label { display: grid; grid-template-rows: min-content minmax(2.1rem, auto) 40px; align-content: start; min-width: 0; }
+.export-column-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(220px, 1.2fr); gap: 14px; padding: 16px 14px; }
+.export-column-fields > label { display: grid; grid-template-rows: min-content minmax(3.15rem, auto) 40px; align-content: start; min-width: 0; }
 .export-column-fields > label > span { grid-row: 1; }
 .export-column-fields > label > small { grid-row: 2; padding-top: 3px; }
 .export-column-fields > label > input, .export-column-fields > label > select { grid-row: 3; }
@@ -50,7 +53,7 @@
 .optional-rules summary::-webkit-details-marker { display: none; }
 .optional-rules summary::before { content: "▸"; display: inline-block; margin-right: 7px; color: #718096; transition: transform .15s ease; }
 .optional-rules[open] summary::before { transform: rotate(90deg); }
-.optional-rules label { display: grid; grid-template-rows: min-content minmax(2.1rem, auto) 40px; min-width: 0; }
+.optional-rules label { display: grid; grid-template-rows: min-content minmax(3.15rem, auto) 40px; min-width: 0; }
 .optional-rules label > small { padding-top: 3px; }
 .optional-rules label > input, .optional-rules label > select { align-self: end; }
 .required-toggle input { justify-self: start; width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: #4c63d2; }
