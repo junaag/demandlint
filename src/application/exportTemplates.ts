@@ -6,7 +6,6 @@ export type ExportValue = string | number | boolean | Date | null;
 export type ExportColumnSource =
   | { kind: "canonical"; field: CanonicalField }
   | { kind: "custom"; key: string }
-  | { kind: "constant"; value: string }
   | { kind: "parameter"; key: string; label: string; defaultValue?: string }
   | { kind: "empty" };
 
@@ -87,7 +86,6 @@ function sourceValue(
 ): CustomFieldValue | undefined {
   if (source.kind === "canonical") return lead[source.field] as CustomFieldValue | undefined;
   if (source.kind === "custom") return lead.customFields?.[source.key];
-  if (source.kind === "constant") return source.value;
   if (source.kind === "parameter") return parameters[source.key] ?? source.defaultValue;
   return "";
 }
@@ -149,6 +147,9 @@ export function buildTemplateExport(
       issues.push({ columnId: item.id, message: `The header '${header}' is duplicated.` });
     }
     seenHeaders.add(normalized);
+    if (!["canonical", "custom", "parameter", "empty"].includes(item.source.kind)) {
+      issues.push({ columnId: item.id, message: `Column '${header || "Unnamed column"}' uses an unsupported value source.` });
+    }
     if (item.source.kind === "parameter" && item.required && isEmpty(parameters[item.source.key] ?? item.source.defaultValue)) {
       issues.push({ columnId: item.id, message: `Enter ${item.source.label}.` });
     }
