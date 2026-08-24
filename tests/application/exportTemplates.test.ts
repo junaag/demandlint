@@ -84,8 +84,14 @@ describe("destination export templates", () => {
     const manual = createExportTemplateDraft({ name: "My CRM import" });
     const duplicate = cloneExportTemplate(manual, { id: "duplicate", name: "My CRM import copy" });
 
-    expect(manual.columns.map((column) => column.header)).toEqual(["Email"]);
-    expect(duplicate.columns.map((column) => column.header)).toEqual(["Email"]);
+    expect(manual.columns.map((column) => column.header)).toEqual(["Email", "First name", "Last name"]);
+    expect(manual.columns.map((column) => column.source)).toEqual([
+      { kind: "canonical", field: "emailProfessional" },
+      { kind: "canonical", field: "firstName" },
+      { kind: "canonical", field: "lastName" },
+    ]);
+    expect(manual.columns.every((column) => column.format === "text" && !column.required)).toBe(true);
+    expect(duplicate.columns.map((column) => column.header)).toEqual(["Email", "First name", "Last name"]);
     expect(duplicate.columns[0]?.id).not.toBe(manual.columns[0]?.id);
   });
 });

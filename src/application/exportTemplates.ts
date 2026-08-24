@@ -208,13 +208,26 @@ export function createExportTemplateDraft(overrides: Partial<ExportTemplate> = {
     defaultFormat: "csv",
     delimiter: ",",
     sheetName: "Export",
-    columns: [{
-      id: templateColumnId(),
-      header: "Email",
-      source: { kind: "canonical", field: "email" },
-      required: true,
-      format: "text",
-    }],
+    columns: [
+      {
+        id: templateColumnId(),
+        header: "Email",
+        source: { kind: "canonical", field: "emailProfessional" },
+        format: "text",
+      },
+      {
+        id: templateColumnId(),
+        header: "First name",
+        source: { kind: "canonical", field: "firstName" },
+        format: "text",
+      },
+      {
+        id: templateColumnId(),
+        header: "Last name",
+        source: { kind: "canonical", field: "lastName" },
+        format: "text",
+      },
+    ],
     ...overrides,
   };
 }
