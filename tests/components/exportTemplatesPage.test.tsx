@@ -18,4 +18,10 @@ describe("ExportTemplatesPage", () => {
     expect(html).toContain("Rename");
     expect(html).toContain("Delete");
   });
+
+  it("uses a full-width template list heading", () => {
+    const html = renderToStaticMarkup(<ExportTemplatesPage templates={[]} organizationId="org-1" onSave={async (template) => template} onDelete={async () => undefined} />);
+    expect(html).toContain("YOUR TEMPLATES");
+    expect(html).not.toContain("WORKSPACE TEMPLATES");
+  });
 });
