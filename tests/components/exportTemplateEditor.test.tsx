@@ -15,6 +15,12 @@ describe("ExportTemplateEditor", () => {
     expect(html).toContain("Leave empty");
     expect(html).not.toContain("Worksheet name");
     expect(html).toContain("Optional rules");
+    expect(html).toContain("E.g. CRM, event platform or internal process.");
+    expect(html).toContain("Choose where DemandLint should get the value for this column.");
+    expect(html).toContain("Export is blocked if this column has no value after applying defaults.");
+    expect(html).toMatch(/class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div>/);
+    expect(html).toMatch(/class="column-card-actions"><button[^>]*>×<\/button><\/div>/);
+    expect(html.indexOf('class="column-card-actions"')).toBeLessThan(html.indexOf("Optional rules"));
   });
 
   it("shows the worksheet setting for XLSX and the fixed-value fields for a parameter column", () => {
@@ -28,5 +34,16 @@ describe("ExportTemplateEditor", () => {
     expect(html).toContain("Value requested at export");
     expect(html).toContain("Default value (optional)");
     expect(html).toContain("Required for export");
+  });
+
+  it("hides Required for an empty column while retaining its header actions", () => {
+    const template = createExportTemplateDraft({
+      columns: [{ id: "empty", header: "Reserved", source: { kind: "empty" } }],
+    });
+    const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
+
+    expect(html).not.toContain("Required for export");
+    expect(html).toMatch(/class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div>/);
+    expect(html).toMatch(/class="column-card-actions"><button[^>]*>×<\/button><\/div>/);
   });
 });

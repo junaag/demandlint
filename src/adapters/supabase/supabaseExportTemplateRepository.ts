@@ -6,8 +6,17 @@ interface ExportTemplateRow {
   id: string;
   organization_id: string;
   name: string;
-  destination_type: string;
+  destination_type: string | null;
   config: Pick<ExportTemplate, "columns" | "defaultFormat" | "delimiter" | "sheetName">;
+}
+
+export function destinationTypeFromStorage(destinationType: string | null): string {
+  return destinationType ?? "";
+}
+
+export function destinationTypeForStorage(destinationType: string): string | null {
+  const normalized = destinationType.trim();
+  return normalized || null;
 }
 
 function fromRow(row: ExportTemplateRow): ExportTemplate {
@@ -15,7 +24,7 @@ function fromRow(row: ExportTemplateRow): ExportTemplate {
     id: row.id,
     organizationId: row.organization_id,
     name: row.name,
-    destinationType: row.destination_type,
+    destinationType: destinationTypeFromStorage(row.destination_type),
     columns: row.config.columns,
     defaultFormat: row.config.defaultFormat,
     ...(row.config.delimiter ? { delimiter: row.config.delimiter } : {}),
@@ -56,7 +65,7 @@ export class SupabaseExportTemplateRepository implements ExportTemplateRepositor
       id: template.id,
       organization_id: template.organizationId,
       name: template.name,
-      destination_type: template.destinationType,
+      destination_type: destinationTypeForStorage(template.destinationType),
       config,
       updated_at: new Date().toISOString(),
     });
