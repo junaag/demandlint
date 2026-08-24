@@ -17,6 +17,23 @@ function copyTemplate(template: ExportTemplate): ExportTemplate {
   });
 }
 
+function previewSourceLabel(template: ExportTemplate["columns"][number]): string {
+  return template.source.kind === "canonical" ? "Default field"
+    : template.source.kind === "custom" ? "Custom field"
+      : template.source.kind === "parameter" ? "Fixed value"
+        : "Leave empty";
+}
+
+export function TemplateStructurePreview({ template }: { template: ExportTemplate }) {
+  return <section className="panel template-structure-preview">
+    <p className="section-label">OUTPUT STRUCTURE PREVIEW</p>
+    <h2>Output structure preview</h2>
+    <p>This is the structure of the exported file, not a data preview.</p>
+    <div className="export-preview-table-wrap template-structure-preview-table"><table className="export-preview-table"><thead><tr>{template.columns.map((column) => <th key={column.id}>{column.header || "(blank column)"}</th>)}</tr></thead><tbody><tr>{template.columns.map((column) => <td key={column.id}>{previewSourceLabel(column)}</td>)}</tr></tbody></table></div>
+    <span className="template-column-count">{template.columns.length} column{template.columns.length === 1 ? "" : "s"}</span>
+  </section>;
+}
+
 export function ExportTemplatesPage({ templates, organizationId, onSave, onDelete }: ExportTemplatesPageProps) {
   const [draft, setDraft] = useState<ExportTemplate | null>(null);
   const [busy, setBusy] = useState<"save" | "delete" | null>(null);
@@ -83,7 +100,7 @@ export function ExportTemplatesPage({ templates, organizationId, onSave, onDelet
       <section className="panel templates-list-panel"><div className="section-heading"><div><p className="section-label">YOUR TEMPLATES</p><h2>{templates.length} template{templates.length === 1 ? "" : "s"}</h2></div><button className="button primary" type="button" onClick={createTemplate}>Create template</button></div>
         {templates.length === 0 ? <div className="empty-state"><strong>No export templates yet.</strong><span>Create one manually, then use it from Prepare Export.</span></div> : <ul className="templates-list">{templates.map((template) => <li key={template.id}><div><strong>{template.name}</strong><span>{template.destinationType || "No destination label"} · {template.columns.length} columns · {template.defaultFormat.toUpperCase()}</span></div><div className="template-list-actions"><button type="button" onClick={() => editTemplate(template)}>Edit</button><button type="button" onClick={() => duplicateTemplate(template)}>Duplicate</button><button type="button" onClick={() => void renameTemplate(template)} disabled={busy !== null}>Rename</button><button className="text-danger-button" type="button" onClick={() => void deleteTemplate(template)} disabled={busy !== null}>Delete</button></div></li>)}</ul>}
       </section>
-      {draft && <><section className="panel template-editor-panel"><div className="section-heading"><div><p className="section-label">{templates.some((template) => template.id === draft.id) ? "EDIT TEMPLATE" : "CREATE TEMPLATE"}</p><h2>{draft.name || "Untitled template"}</h2></div><button className="text-button" type="button" onClick={() => setDraft(null)}>Close</button></div><ExportTemplateEditor template={draft} onChange={setDraft} /><div className="template-editor-actions"><button className="button primary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : "Save template"}</button></div></section><section className="panel template-structure-preview"><p className="section-label">OUTPUT STRUCTURE PREVIEW</p><h2>Output structure preview</h2><p>This is the structure of the exported file, not a data preview.</p><table><thead><tr>{draft.columns.map((column) => <th key={column.id}>{column.header || "(blank column)"}</th>)}</tr></thead><tbody><tr>{draft.columns.map((column) => <td key={column.id}>{column.source.kind === "canonical" ? "Default field" : column.source.kind === "custom" ? "Custom field" : column.source.kind === "parameter" ? "Fixed value" : "Leave empty"}</td>)}</tr></tbody></table><span>{draft.columns.length} column{draft.columns.length === 1 ? "" : "s"}</span></section></>}
+      {draft && <><section className="panel template-editor-panel"><div className="section-heading"><div><p className="section-label">{templates.some((template) => template.id === draft.id) ? "EDIT TEMPLATE" : "CREATE TEMPLATE"}</p><h2>{draft.name || "Untitled template"}</h2></div><button className="text-button" type="button" onClick={() => setDraft(null)}>Close</button></div><ExportTemplateEditor template={draft} onChange={setDraft} /><div className="template-editor-actions"><button className="button primary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : "Save template"}</button></div></section><TemplateStructurePreview template={draft} /></>}
     </div>
   </section>;
 }

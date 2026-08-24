@@ -45,7 +45,7 @@ describe("prepare export workflow", () => {
     expect(templateMode.template.parameters).toEqual({ campaign: "Template campaign" });
     expect(customMode.custom.format).toBe("xlsx");
     expect(customMode.custom.parameters).toEqual({ campaign: "Autumn launch" });
-    expect(customMode.custom.draft.columns).toHaveLength(2);
+    expect(customMode.custom.draft.columns).toHaveLength(initial.custom.draft.columns.length + 1);
     expect(customMode.template.draft.columns).toHaveLength(initial.template.draft.columns.length);
   });
 

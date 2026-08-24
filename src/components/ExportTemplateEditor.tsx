@@ -75,7 +75,14 @@ export function ExportTemplateEditor({ template, onChange, heading = "Template c
         </div>
         {template.columns.map((column, index) => (
           <article className="export-column-card" key={column.id}>
-            <div className="column-order"><strong>{index + 1}</strong><button type="button" aria-label="Move column up" disabled={index === 0} onClick={() => moveColumn(index, -1)}>↑</button><button type="button" aria-label="Move column down" disabled={index === template.columns.length - 1} onClick={() => moveColumn(index, 1)}>↓</button></div>
+            <header className="export-column-card-header">
+              <div className="column-order"><strong>{index + 1}</strong><span>{column.header || "Untitled column"}</span></div>
+              <div className="column-card-actions">
+                <button className="column-action-button" type="button" aria-label="Move column up" disabled={index === 0} onClick={() => moveColumn(index, -1)}>↑</button>
+                <button className="column-action-button" type="button" aria-label="Move column down" disabled={index === template.columns.length - 1} onClick={() => moveColumn(index, 1)}>↓</button>
+                <button className="column-action-button danger" type="button" aria-label={`Remove ${column.header}`} onClick={() => onChange({ ...template, columns: template.columns.filter((item) => item.id !== column.id) })}>×</button>
+              </div>
+            </header>
             <div className="export-column-fields">
               <label><span>Column name</span><small>Name of the column in the exported file.</small><input value={column.header} onChange={(event) => updateColumn(column.id, (current) => ({ ...current, header: event.target.value }))} /></label>
               <label><span>Value comes from</span><select value={column.source.kind} onChange={(event) => changeSource(column, event.target.value as ExportColumnSource["kind"])}><option value="canonical">Default field</option><option value="custom">Custom field</option><option value="parameter">Fixed value</option><option value="empty">Leave empty</option></select></label>
@@ -86,8 +93,7 @@ export function ExportTemplateEditor({ template, onChange, heading = "Template c
               {column.source.kind === "parameter" && <label><span>Value type</span><small>Controls how the value is written in the exported file.</small><select value={column.format ?? "text"} onChange={(event) => updateColumn(column.id, (current) => ({ ...current, format: event.target.value as ExportValueFormat }))}><option value="text">Text / identifier</option><option value="number">Number</option><option value="date">Date</option><option value="datetime">Date & time</option><option value="boolean">Yes / No</option></select></label>}
               {column.source.kind !== "empty" && (column.format === "date" || column.format === "datetime") && <label><span>Date format</span><select value={column.datePattern ?? (column.format === "datetime" ? "iso-datetime" : "yyyy-MM-dd")} onChange={(event) => updateColumn(column.id, (current) => ({ ...current, datePattern: event.target.value as ExportDatePattern }))}><option value="yyyy-MM-dd">YYYY-MM-DD</option><option value="yyyy/MM/dd">YYYY/MM/DD</option><option value="MM/dd/yyyy">MM/DD/YYYY</option><option value="dd/MM/yyyy">DD/MM/YYYY</option><option value="iso-datetime">ISO date & time</option></select></label>}
             </div>
-            {column.source.kind !== "empty" && <label className="required-toggle"><input type="checkbox" checked={column.required ?? false} onChange={(event) => updateColumn(column.id, (current) => ({ ...current, required: event.target.checked }))} />Required for export</label>}
-            <button className="icon-danger-button" type="button" aria-label={`Remove ${column.header}`} onClick={() => onChange({ ...template, columns: template.columns.filter((item) => item.id !== column.id) })}>×</button>
+            {column.source.kind !== "empty" && <footer className="export-column-card-footer"><label className="required-toggle"><input type="checkbox" checked={column.required ?? false} onChange={(event) => updateColumn(column.id, (current) => ({ ...current, required: event.target.checked }))} />Required for export</label></footer>}
           </article>
         ))}
       </div>
