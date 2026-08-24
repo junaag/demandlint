@@ -6,7 +6,7 @@ describe("BuildInfo", () => {
   it("displays build-provided version and commit metadata", () => {
     const html = renderToStaticMarkup(<BuildInfo />);
 
-    expect(html).toContain("DemandLint v0.3.2");
-    expect(html).toMatch(/DemandLint v0\.3\.2 · [a-z0-9]{5,7}/);
+    expect(html).toContain("DemandLint v0.3.3");
+    expect(html).toMatch(/DemandLint v0\.3\.3 · [a-z0-9]{5,7}/);
   });
 });
