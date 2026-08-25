@@ -43,12 +43,21 @@ describe("ExportTemplateEditor", () => {
     expect(html).toContain("ISO 8601 UTC — 2026-08-26T14:30:00Z");
   });
 
-  it("shows a source-field menu without selecting a fallback for newly mapped columns", () => {
+  it("shows a neutral source-field dropdown without a fallback or custom-field input for a newly mapped column", () => {
     const template = createExportTemplateDraft({ columns: [{ id: "gdpr", header: "GDPR Opt-in", source: { kind: "custom", key: "" } }] });
     const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
-    expect(html).toContain("Select a source field…");
-    expect(html).toContain("Other imported field name");
+    expect(html).toContain("Select source field");
+    expect(html).not.toContain("Other imported field name");
+    expect(html).not.toContain('value="canonical:email" selected');
     expect(html).toContain("Contact Opt-in");
+    expect(html).toContain("Other imported field…");
+  });
+
+  it("preserves editable custom-field mappings", () => {
+    const template = createExportTemplateDraft({ columns: [{ id: "custom", header: "Send GDPR follow up email", source: { kind: "custom", key: "send_gdpr_follow_up" } }] });
+    const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
+    expect(html).toContain('value="custom" selected');
+    expect(html).toContain('value="send_gdpr_follow_up"');
   });
 
   it("keeps empty columns free of contradictory empty-value controls", () => {
