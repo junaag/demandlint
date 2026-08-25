@@ -43,6 +43,14 @@ describe("ExportTemplateEditor", () => {
     expect(html).toContain("ISO 8601 UTC — 2026-08-26T14:30:00Z");
   });
 
+  it("shows a source-field menu without selecting a fallback for newly mapped columns", () => {
+    const template = createExportTemplateDraft({ columns: [{ id: "gdpr", header: "GDPR Opt-in", source: { kind: "custom", key: "" } }] });
+    const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
+    expect(html).toContain("Select a source field…");
+    expect(html).toContain("Other imported field name");
+    expect(html).toContain("Contact Opt-in");
+  });
+
   it("keeps empty columns free of contradictory empty-value controls", () => {
     const template = createExportTemplateDraft({ columns: [{ id: "empty", header: "Reserved", source: { kind: "empty" } }] });
     const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);

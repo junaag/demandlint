@@ -1,7 +1,12 @@
 .templates-page-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 14px; }
 .templates-list-panel, .template-editor-panel, .template-structure-preview { padding: 20px 22px; }
 .template-heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
-.template-file-import { position: relative; overflow: hidden; cursor: pointer; }
+.template-file-import { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 14px; overflow: hidden; border: 1px solid #d9e0ec; border-radius: 10px; background: #f7f9fc; color: #25324a; cursor: pointer; text-align: left; }
+.template-file-import:hover:not(.disabled) { border-color: #b9c8e8; background: #eef3ff; }
+.template-file-import > span:last-of-type { display: grid; gap: 2px; }
+.template-file-import strong { font-size: .88rem; }
+.template-file-import small { color: #718096; font-size: .72rem; font-weight: 500; }
+.template-file-import-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: #e4ebff; color: #4058c5; font-size: 1.15rem; font-weight: 750; }
 .template-file-import input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
 .template-file-import.disabled { cursor: wait; opacity: .6; }
 .template-import-review { padding: 0; }
@@ -56,6 +61,8 @@
 .export-column-fields > label > span { grid-row: 1; }
 .export-column-fields > label > small { grid-row: 2; padding-top: 3px; }
 .export-column-fields > label > input, .export-column-fields > label > select { grid-row: 3; }
+.source-field-selection .source-field-control { grid-row: 3; display: grid; gap: 6px; }
+.source-field-selection .source-field-control > select, .source-field-selection .source-field-control > input { min-width: 0; }
 .optional-rules { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 2px -14px 0; padding: 12px 14px 0; border-top: 1px solid #e8ebf0; }
 .optional-rules summary { grid-column: 1 / -1; cursor: pointer; color: #46536b; font-size: .84rem; font-weight: 650; list-style: none; }
 .optional-rules summary::-webkit-details-marker { display: none; }

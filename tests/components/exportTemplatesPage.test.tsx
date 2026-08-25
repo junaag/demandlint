@@ -8,7 +8,8 @@ describe("ExportTemplatesPage", () => {
 
     expect(html).toContain("No export templates yet.");
     expect(html).toContain("Create template");
-    expect(html).toContain("Import template file");
+    expect(html).toContain("Import template");
+    expect(html).toContain("CSV, XLS or XLSX");
     expect(html).toContain('accept=".csv,.xlsx,.xls');
   });
 
