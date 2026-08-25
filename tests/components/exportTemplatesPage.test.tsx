@@ -36,7 +36,7 @@ describe("ExportTemplatesPage", () => {
     ] }} />);
 
     expect(html).toMatch(/<th>Email<\/th><th>Account owner<\/th><th>Campaign<\/th><th>Reserved<\/th>/);
-    expect(html).toMatch(/<td>Default field<\/td><td>Custom field<\/td><td>Fixed value<\/td><td>Leave empty<\/td>/);
+    expect(html).toMatch(/<td>Mapped field<\/td><td>Mapped field<\/td><td>Fixed value<\/td><td>Leave empty<\/td>/);
     expect(html).toContain("4 columns");
     expect(html).not.toContain("Constant");
   });

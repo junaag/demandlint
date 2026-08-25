@@ -14,7 +14,7 @@ const template: ExportTemplate = {
   name: "Event import",
   destinationType: "Events platform",
   defaultFormat: "csv",
-  columns: [{ id: "email", header: "Email", source: { kind: "canonical", field: "email" } }],
+  columns: [{ id: "email", header: "Email", source: { kind: "canonical", field: "email" }, validationRules: [{ kind: "allowedValues", outcome: "block", values: ["a@example.test"] }] }],
 };
 
 describe("local export template repository", () => {
@@ -25,6 +25,7 @@ describe("local export template repository", () => {
     await repository.save({ ...template, id: "two", organizationId: "org-b" });
     expect(await repository.listForOrganization("org-a")).toHaveLength(1);
     expect((await repository.getById("one"))?.name).toBe("Event import v2");
+    expect((await repository.getById("one"))?.columns[0]?.validationRules?.[0]).toEqual({ kind: "allowedValues", outcome: "block", values: ["a@example.test"] });
     await repository.delete("one");
     expect(await repository.listForOrganization("org-a")).toEqual([]);
   });

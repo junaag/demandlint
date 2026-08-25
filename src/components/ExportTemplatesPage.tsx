@@ -24,9 +24,8 @@ function copyTemplate(template: ExportTemplate): ExportTemplate {
 }
 
 function previewSourceLabel(template: ExportTemplate["columns"][number]): string {
-  return template.source.kind === "canonical" ? "Default field"
-    : template.source.kind === "custom" ? "Custom field"
-      : template.source.kind === "parameter" ? "Fixed value"
+  return template.source.kind === "canonical" || template.source.kind === "custom" ? "Mapped field"
+    : template.source.kind === "fixed" || template.source.kind === "parameter" ? "Fixed value"
         : "Leave empty";
 }
 

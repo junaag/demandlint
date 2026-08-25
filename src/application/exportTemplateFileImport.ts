@@ -7,6 +7,7 @@ import {
   templateColumnId,
   type ExportColumnSource,
   type ExportTemplate,
+  type ExportValidationRule,
 } from "./exportTemplates";
 
 export type ExportTemplateFileType = "csv" | "xlsx" | "xls";
@@ -27,6 +28,7 @@ export interface ExportTemplateFileSheet {
   headerRows: ExportTemplateHeaderRow[];
   preferredHeaderRowNumber?: number;
   requiresHeaderReview: boolean;
+  columnValidations?: Record<number, { rules: ExportValidationRule[]; warnings?: string[] }>;
 }
 
 export interface ExportTemplateFileAnalysis {
@@ -109,6 +111,24 @@ export function createExportTemplateDraftFromFileAnalysis(
         : "csv"
     : analysis.sourceType;
 
+  const importedColumns = headers.map((header, index) => ({
+    id: templateColumnId(),
+    header: header.trim() ? header : `Column ${index + 1}`,
+    source: sources[index] ?? { kind: "empty" } as ExportColumnSource,
+    format: "text" as const,
+    ...(sheet.columnValidations?.[index]?.rules.length ? { validationRules: sheet.columnValidations[index].rules } : {}),
+    ...(sheet.columnValidations?.[index]?.warnings?.length ? { sourceValidationWarnings: sheet.columnValidations[index].warnings } : {}),
+  }));
+  const columns = importedColumns.map((column) => {
+    const validationRules = column.validationRules?.map((rule) => {
+      if ((rule.kind === "requiredWhen" || rule.kind === "dependentAllowedValues") && /^__column_\d+$/.test(rule.parentColumnId)) {
+        const parent = importedColumns[Number(rule.parentColumnId.slice("__column_".length))];
+        return parent ? { ...rule, parentColumnId: parent.id } : rule;
+      }
+      return rule;
+    });
+    return { ...column, ...(validationRules ? { validationRules } : {}) };
+  });
   const draft = createExportTemplateDraft({
     name: analysis.templateName,
     destinationType: "",
@@ -116,12 +136,7 @@ export function createExportTemplateDraftFromFileAnalysis(
     ...(analysis.delimiter ? { delimiter: analysis.delimiter } : {}),
     ...(analysis.sourceType !== "csv" ? { sheetName: sheet.name } : {}),
     ...(selection.organizationId ? { organizationId: selection.organizationId } : {}),
-    columns: headers.map((header, index) => ({
-      id: templateColumnId(),
-      header: header.trim() ? header : `Column ${index + 1}`,
-      source: sources[index] ?? { kind: "empty" },
-      format: "text",
-    })),
+    columns,
   });
   if (analysis.sourceType !== "csv") return draft;
   const { sheetName: _sheetName, ...csvDraft } = draft;

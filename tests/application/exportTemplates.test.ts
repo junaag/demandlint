@@ -94,4 +94,35 @@ describe("destination export templates", () => {
     expect(duplicate.columns.map((column) => column.header)).toEqual(["Email", "First name", "Last name"]);
     expect(duplicate.columns[0]?.id).not.toBe(manual.columns[0]?.id);
   });
+
+  it("validates final values after fallback and replacements, with review outcomes separated from blocks", () => {
+    const output = buildTemplateExport({
+      ...template,
+      columns: [
+        { id: "country", header: "Country", source: { kind: "custom", key: "country" }, defaultValue: "United States", valueMappings: [{ from: "US", to: "United States" }], validationRules: [{ kind: "allowedValues", outcome: "block", values: ["United States"] }] },
+        { id: "state", header: "State", source: { kind: "custom", key: "state" }, validationRules: [{ kind: "requiredWhen", outcome: "block", parentColumnId: "country", operator: "is", values: ["United States"] }, { kind: "dependentAllowedValues", outcome: "review", parentColumnId: "country", cases: { "United States": ["CA"] } }] },
+      ],
+    }, [{ ...lead, customFields: { country: "US", state: "NY" } }]);
+    expect(output.rows[0]).toEqual({ column_0: "United States", column_1: "NY" });
+    expect(output.issues).toEqual([{ columnId: "state", outcome: "review", message: "State is invalid for source row 7." }]);
+  });
+
+  it("blocks empty required output and detects required empty configurations", () => {
+    const output = buildTemplateExport({
+      ...template,
+      columns: [
+        { id: "required", header: "Required", source: { kind: "empty" }, validationRules: [{ kind: "required", outcome: "block" }] },
+        { id: "conditional", header: "Conditional", source: { kind: "empty" }, validationRules: [{ kind: "requiredWhen", outcome: "block", parentColumnId: "parent", operator: "isOneOf", values: ["Yes"] }] },
+        { id: "parent", header: "Parent", source: { kind: "fixed", value: "Yes" } },
+      ],
+    }, [lead]);
+    expect(output.issues.some((issue) => issue.columnId === "required" && issue.outcome === "block")).toBe(true);
+    expect(output.issues.some((issue) => issue.columnId === "conditional" && issue.outcome === "block")).toBe(true);
+  });
+
+  it("keeps pre-v0.3.8 required templates functional", () => {
+    const { email: _email, ...withoutEmail } = lead;
+    const output = buildTemplateExport({ ...template, columns: [{ id: "legacy", header: "Email", source: { kind: "canonical", field: "email" }, required: true }] }, [withoutEmail]);
+    expect(output.issues.some((issue) => issue.outcome === "block")).toBe(true);
+  });
 });

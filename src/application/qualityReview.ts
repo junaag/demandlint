@@ -29,8 +29,11 @@ export const CANONICAL_EXPORT_FIELDS: readonly CanonicalField[] = [
   "phoneDirect",
   "phoneStandard",
   "country",
+  "stateProvince", "city", "postalCode", "address", "salutation", "jobLevel", "department", "localCompanyName", "website", "industry",
   "leadSource",
+  "campaignId", "campaignName",
   "campaignMemberStatus",
+  "utmSource", "utmMedium", "utmCampaign", "utmContent", "initialResponseDate", "marketingConsent", "salesFollowUpRequested", "contactNotes",
 ];
 
 export const REVIEW_EXPORT_COLUMNS = [
@@ -129,8 +132,28 @@ function canonicalExportRow(lead: CanonicalLead): CanonicalExportRow {
     phoneDirect: lead.phoneDirect ?? "",
     phoneStandard: lead.phoneStandard ?? "",
     country: lead.country ?? "",
+    stateProvince: lead.stateProvince ?? "",
+    city: lead.city ?? "",
+    postalCode: lead.postalCode ?? "",
+    address: lead.address ?? "",
+    salutation: lead.salutation ?? "",
+    jobLevel: lead.jobLevel ?? "",
+    department: lead.department ?? "",
+    localCompanyName: lead.localCompanyName ?? "",
+    website: lead.website ?? "",
+    industry: lead.industry ?? "",
     leadSource: lead.leadSource ?? "",
+    campaignId: lead.campaignId ?? "",
+    campaignName: lead.campaignName ?? "",
     campaignMemberStatus: lead.campaignMemberStatus ?? "",
+    utmSource: lead.utmSource ?? "",
+    utmMedium: lead.utmMedium ?? "",
+    utmCampaign: lead.utmCampaign ?? "",
+    utmContent: lead.utmContent ?? "",
+    initialResponseDate: lead.initialResponseDate ?? "",
+    marketingConsent: lead.marketingConsent ?? "",
+    salesFollowUpRequested: lead.salesFollowUpRequested ?? "",
+    contactNotes: lead.contactNotes ?? "",
   };
 }
 

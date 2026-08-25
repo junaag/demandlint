@@ -58,6 +58,10 @@ export type {
   ExportValidationIssue,
   ExportValueFormat,
   ExportValueMapping,
+  ExportValidationOutcome,
+  ExportValidationRule,
+  ExportRequiredWhenOperator,
+  ExportSimpleValidationKind,
 } from "./exportTemplates";
 export {
   CANONICAL_FIELD_LABELS,

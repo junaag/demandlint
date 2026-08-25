@@ -12,8 +12,28 @@ export type CanonicalField =
   | "phoneDirect"
   | "phoneStandard"
   | "country"
+  | "stateProvince"
+  | "city"
+  | "postalCode"
+  | "address"
+  | "salutation"
+  | "jobLevel"
+  | "department"
+  | "localCompanyName"
+  | "website"
+  | "industry"
   | "leadSource"
-  | "campaignMemberStatus";
+  | "campaignId"
+  | "campaignName"
+  | "campaignMemberStatus"
+  | "utmSource"
+  | "utmMedium"
+  | "utmCampaign"
+  | "utmContent"
+  | "initialResponseDate"
+  | "marketingConsent"
+  | "salesFollowUpRequested"
+  | "contactNotes";
 
 export type EmailKind = "professional" | "secondary" | "personal" | "other";
 export type PhoneKind = "mobile" | "direct" | "standard" | "other";
@@ -91,8 +111,28 @@ export interface CanonicalLead {
   phoneStandard?: string;
   phones?: PhoneContactPoint[];
   country?: string;
+  stateProvince?: string;
+  city?: string;
+  postalCode?: string;
+  address?: string;
+  salutation?: string;
+  jobLevel?: string;
+  department?: string;
+  localCompanyName?: string;
+  website?: string;
+  industry?: string;
   leadSource?: string;
+  campaignId?: string;
+  campaignName?: string;
   campaignMemberStatus?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  initialResponseDate?: string;
+  marketingConsent?: string;
+  salesFollowUpRequested?: string;
+  contactNotes?: string;
   customFields?: CustomFields;
   /** @deprecated Use provenance.rowNumber for multi-source workflows. */
   sourceRow: number;

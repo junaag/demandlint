@@ -6,10 +6,13 @@ import type {
   ExportTemplateFileType,
   ExportTemplateHeaderRow,
 } from "../../application/exportTemplateFileImport";
+import type { ExportValidationRule } from "../../application/exportTemplates";
 import type { LocalTableFile } from "../table/domain";
 
 type TemplateCell = string | number | boolean | Date | null | undefined;
 type TemplateRow = TemplateCell[];
+
+type ColumnValidations = Record<number, { rules: ExportValidationRule[]; warnings?: string[] }>;
 
 const MAX_HEADER_SCAN_ROWS = 25;
 const MAX_HEADER_OPTIONS = 8;
@@ -63,7 +66,7 @@ function hasDuplicateHeaders(row: ExportTemplateHeaderRow): boolean {
   return new Set(headers).size !== headers.length;
 }
 
-function analyzeSheet(name: string, index: number, sourceRows: TemplateRow[]): ExportTemplateFileSheet {
+function analyzeSheet(name: string, index: number, sourceRows: TemplateRow[], columnValidations?: ColumnValidations): ExportTemplateFileSheet {
   const rows = sourceRows.map((row) => Array.isArray(row) ? row : []);
   const columnCount = actualColumnCount(rows);
   const meaningfulIndexes = rows
@@ -107,7 +110,155 @@ function analyzeSheet(name: string, index: number, sourceRows: TemplateRow[]): E
     requiresHeaderReview: preferredIndex !== firstMeaningfulIndex
       || (preferred?.nonEmptyCount ?? 0) < 2
       || (preferred ? hasDuplicateHeaders(preferred) : false),
+    ...(columnValidations && Object.keys(columnValidations).length > 0 ? { columnValidations } : {}),
   };
+}
+
+function decodeEntities(value: string): string {
+  return value.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+}
+
+function columnIndexFromReference(reference: string): number | undefined {
+  const match = reference.match(/\$?([A-Z]{1,3})\$?\d+/i);
+  if (!match) return undefined;
+  return [...match[1]!.toUpperCase()].reduce((total, character) => total * 26 + character.charCodeAt(0) - 64, 0) - 1;
+}
+
+function columnsFromSqref(sqref: string, XLSX: typeof import("xlsx")): number[] {
+  const columns = new Set<number>();
+  for (const reference of sqref.trim().split(/\s+/)) {
+    try {
+      const range = XLSX.utils.decode_range(reference);
+      for (let column = range.s.c; column <= range.e.c; column += 1) columns.add(column);
+    } catch {
+      const column = columnIndexFromReference(reference);
+      if (column !== undefined) columns.add(column);
+    }
+  }
+  return [...columns];
+}
+
+function workbookXmlParts(XLSX: typeof import("xlsx"), bytes: Uint8Array): Map<string, string> {
+  const parts = new Map<string, string>();
+  try {
+    const cfb = (XLSX as unknown as { CFB: { read(data: Uint8Array, options: { type: string }): { FullPaths?: string[] }; find(cfb: unknown, path: string): { content?: Uint8Array } | undefined } }).CFB.read(bytes, { type: "array" });
+    for (const path of cfb.FullPaths ?? []) {
+      if (!/^Root Entry\/xl\/worksheets\/sheet\d+\.xml$/i.test(path)) continue;
+      const entry = (XLSX as unknown as { CFB: { find(cfb: unknown, path: string): { content?: Uint8Array } | undefined } }).CFB.find(cfb, path);
+      if (entry?.content) parts.set(path.replace(/^Root Entry\/xl\/worksheets\//i, ""), new TextDecoder().decode(entry.content));
+    }
+  } catch {
+    // SheetJS's workbook values are still usable; validation extraction will surface no invented rules.
+  }
+  return parts;
+}
+
+function namedReferences(workbook: import("xlsx").WorkBook): Map<string, string> {
+  return new Map((workbook.Workbook?.Names ?? []).flatMap((name) => name.Name && name.Ref ? [[name.Name, name.Ref] as const] : []));
+}
+
+function referenceValues(
+  reference: string,
+  workbook: import("xlsx").WorkBook,
+  currentSheet: string,
+  XLSX: typeof import("xlsx"),
+): string[] | undefined {
+  const cleaned = decodeEntities(reference).replace(/^=/, "").trim();
+  const quoted = cleaned.match(/^"([\s\S]*)"$/);
+  if (quoted) return quoted[1]!.split(",").map((value) => value.trim());
+  const parts = cleaned.match(/^(?:'([^']+)'|([^!]+))!\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/i)
+    ?? cleaned.match(/^\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/i);
+  if (!parts) return undefined;
+  const hasSheet = cleaned.includes("!");
+  const sheetName = hasSheet ? (parts[1] ?? parts[2]) : currentSheet;
+  const columnStart = hasSheet ? parts[3] : parts[1];
+  const rowStart = hasSheet ? parts[4] : parts[2];
+  const columnEnd = hasSheet ? (parts[5] ?? columnStart) : (parts[3] ?? columnStart);
+  const rowEnd = hasSheet ? (parts[6] ?? rowStart) : (parts[4] ?? rowStart);
+  const sheet = workbook.Sheets[sheetName!];
+  if (!sheet) return undefined;
+  const range = XLSX.utils.decode_range(`${columnStart}${rowStart}:${columnEnd}${rowEnd}`);
+  const rows = XLSX.utils.sheet_to_json<Array<unknown>>(sheet, { header: 1, raw: true, defval: null, blankrows: true });
+  const values: string[] = [];
+  for (let row = range.s.r; row <= range.e.r; row += 1) for (let column = range.s.c; column <= range.e.c; column += 1) {
+    const value = rows[row]?.[column] ?? sheet[XLSX.utils.encode_cell({ r: row, c: column })]?.v;
+    if (value !== undefined && value !== null && String(value).trim()) values.push(String(value));
+  }
+  return values;
+}
+
+interface RawValidation { sqref: string; formula: string; type?: string }
+
+function rawValidations(xml: string): RawValidation[] {
+  const result: RawValidation[] = [];
+  const validationPattern = /<(?:\w+:)?dataValidation\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?dataValidation>/gi;
+  for (const match of xml.matchAll(validationPattern)) {
+    const attributes = match[1] ?? "";
+    const body = match[2] ?? "";
+    const sqref = attributes.match(/\bsqref="([^"]+)"/)?.[1] ?? body.match(/<(?:\w+:)?sqref>([^<]+)</i)?.[1];
+    const formula = body.match(/<(?:\w+:)?formula1>([\s\S]*?)<\/(?:\w+:)?formula1>/i)?.[1]
+      ?? body.match(/<(?:\w+:)?f>([\s\S]*?)<\/(?:\w+:)?f>/i)?.[1];
+    const type = attributes.match(/\btype="([^"]+)"/)?.[1];
+    if (sqref && formula) result.push(type ? { sqref, formula: formula.trim(), type } : { sqref, formula: formula.trim() });
+  }
+  return result;
+}
+
+function normalizeWorkbookValidations(
+  workbook: import("xlsx").WorkBook,
+  bytes: Uint8Array,
+  XLSX: typeof import("xlsx"),
+): Map<string, ColumnValidations> {
+  const names = namedReferences(workbook);
+  const valuesForFormula = (formula: string, sheetName: string) => referenceValues(names.get(formula.replace(/^=/, "")) ?? formula, workbook, sheetName, XLSX);
+  const result = new Map<string, ColumnValidations>();
+  const xmlByPart = workbookXmlParts(XLSX, bytes);
+  workbook.SheetNames.forEach((sheetName, index) => {
+    const xml = xmlByPart.get(`sheet${index + 1}.xml`);
+    if (!xml) return;
+    const target: ColumnValidations = {};
+    const parentAllowed = new Map<number, string[]>();
+    const pending: Array<{ columns: number[]; formula: string }> = [];
+    for (const validation of rawValidations(xml)) {
+      const columns = columnsFromSqref(validation.sqref, XLSX);
+      if (validation.type && validation.type !== "list") {
+        for (const column of columns) target[column] = { rules: [], warnings: ["Source validation needs review; this Excel validation type is not supported."] };
+        continue;
+      }
+      if (/\bINDIRECT\s*\(/i.test(validation.formula)) {
+        pending.push({ columns, formula: validation.formula });
+        continue;
+      }
+      const values = valuesForFormula(validation.formula, sheetName);
+      for (const column of columns) {
+        if (!values) target[column] = { rules: [], warnings: ["Source validation needs review; this list formula could not be resolved."] };
+        else {
+          target[column] = { rules: [{ kind: "allowedValues", outcome: "block", values }] };
+          parentAllowed.set(column, values);
+        }
+      }
+    }
+    for (const dependent of pending) {
+      const parentColumn = columnIndexFromReference(dependent.formula);
+      if (parentColumn === undefined) {
+        for (const column of dependent.columns) target[column] = { rules: [], warnings: ["Source validation needs review; this dependent list could not be resolved."] };
+        continue;
+      }
+      const parentValues = parentAllowed.get(parentColumn) ?? [];
+      const cases: Record<string, string[]> = {};
+      for (const parentValue of parentValues) {
+        const key = parentValue.replace(/[^A-Za-z0-9_]/g, "_");
+        const values = valuesForFormula(`=${key}`, sheetName);
+        if (values) cases[parentValue] = values;
+      }
+      for (const column of dependent.columns) {
+        if (Object.keys(cases).length === 0) target[column] = { rules: [], warnings: ["Source validation needs review; this dependent list could not be resolved."] };
+        else target[column] = { rules: [{ kind: "dependentAllowedValues", outcome: "block", parentColumnId: `__column_${parentColumn}`, cases }] };
+      }
+    }
+    if (Object.keys(target).length > 0) result.set(sheetName, target);
+  });
+  return result;
 }
 
 function detectedDelimiter(value: string | undefined): ExportTemplateDelimiter | undefined {
@@ -159,6 +310,7 @@ async function analyzeWorkbook(
   try {
     const XLSX = await import("xlsx");
     const workbook = XLSX.read(file.bytes, { type: "array", cellDates: true, dense: true });
+    const validations = sourceType === "xlsx" ? normalizeWorkbookValidations(workbook, file.bytes, XLSX) : new Map<string, ColumnValidations>();
     sheets = workbook.SheetNames.map((name, index) => {
       const rows = XLSX.utils.sheet_to_json<TemplateRow>(workbook.Sheets[name]!, {
         header: 1,
@@ -166,7 +318,7 @@ async function analyzeWorkbook(
         defval: null,
         blankrows: true,
       });
-      return analyzeSheet(name, index, rows);
+      return analyzeSheet(name, index, rows, validations.get(name));
     });
   } catch (error) {
     throw new Error(`${sourceType.toUpperCase()} template file could not be parsed.`, { cause: error });

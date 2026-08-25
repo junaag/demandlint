@@ -6,6 +6,8 @@ export type ExportValue = string | number | boolean | Date | null;
 export type ExportColumnSource =
   | { kind: "canonical"; field: CanonicalField }
   | { kind: "custom"; key: string }
+  | { kind: "fixed"; value: string }
+  // Retained only to deserialize v0.3.7 templates. New templates use fixed values.
   | { kind: "parameter"; key: string; label: string; defaultValue?: string }
   | { kind: "empty" };
 
@@ -17,10 +19,28 @@ export interface ExportValueMapping {
   to: string;
 }
 
+export type ExportValidationOutcome = "block" | "review";
+export type ExportRequiredWhenOperator = "is" | "isNot" | "isOneOf" | "isNotOneOf";
+export type ExportSimpleValidationKind =
+  | "email" | "url" | "digitsOnly" | "noDigits" | "noSpaces"
+  | "contains" | "doesNotContain" | "startsWith" | "endsWith";
+
+export type ExportValidationRule =
+  | { kind: "required"; outcome: ExportValidationOutcome }
+  | { kind: "requiredWhen"; outcome: ExportValidationOutcome; parentColumnId: string; operator: ExportRequiredWhenOperator; values: string[] }
+  | { kind: "allowedValues"; outcome: ExportValidationOutcome; values: string[] }
+  | { kind: "dependentAllowedValues"; outcome: ExportValidationOutcome; parentColumnId: string; cases: Record<string, string[]> }
+  | { kind: "simple"; outcome: ExportValidationOutcome; validation: ExportSimpleValidationKind; value?: string };
+
 export interface ExportTemplateColumn {
   id: string;
   header: string;
   source: ExportColumnSource;
+  /** v0.3.8 normalized validation rules. `required` below is read as a legacy rule. */
+  validationRules?: ExportValidationRule[];
+  /** Structured source rules that were detected but could not safely be normalized. */
+  sourceValidationWarnings?: string[];
+  /** v0.3.7 compatibility only; use a `required` validation rule for new templates. */
   required?: boolean;
   defaultValue?: string;
   format?: ExportValueFormat;
@@ -45,6 +65,7 @@ export type ExportParameterValues = Record<string, string>;
 export interface ExportValidationIssue {
   columnId?: string;
   message: string;
+  outcome?: ExportValidationOutcome;
 }
 
 export interface ExportBuildResult {
@@ -67,8 +88,28 @@ export const CANONICAL_FIELD_LABELS: Record<CanonicalField, string> = {
   phoneDirect: "Direct phone",
   phoneStandard: "Switchboard phone",
   country: "Country",
+  stateProvince: "State / province",
+  city: "City",
+  postalCode: "Postal code",
+  address: "Address",
+  salutation: "Salutation",
+  jobLevel: "Job level",
+  department: "Department",
+  localCompanyName: "Local company name",
+  website: "Website",
+  industry: "Industry",
   leadSource: "Lead source",
+  campaignId: "Campaign ID",
+  campaignName: "Campaign name",
   campaignMemberStatus: "Campaign member status",
+  utmSource: "UTM source",
+  utmMedium: "UTM medium",
+  utmCampaign: "UTM campaign",
+  utmContent: "UTM content",
+  initialResponseDate: "Initial response date",
+  marketingConsent: "Marketing consent",
+  salesFollowUpRequested: "Sales follow-up requested",
+  contactNotes: "Contact notes",
 };
 
 export const CANONICAL_FIELD_OPTIONS = Object.entries(CANONICAL_FIELD_LABELS).map(
@@ -86,8 +127,38 @@ function sourceValue(
 ): CustomFieldValue | undefined {
   if (source.kind === "canonical") return lead[source.field] as CustomFieldValue | undefined;
   if (source.kind === "custom") return lead.customFields?.[source.key];
+  if (source.kind === "fixed") return source.value;
   if (source.kind === "parameter") return parameters[source.key] ?? source.defaultValue;
   return "";
+}
+
+function rulesFor(column: ExportTemplateColumn): ExportValidationRule[] {
+  const rules = column.validationRules ?? [];
+  return column.required && !rules.some((rule) => rule.kind === "required")
+    ? [{ kind: "required", outcome: "block" }, ...rules]
+    : rules;
+}
+
+function displayValue(value: ExportValue | undefined): string {
+  return value === undefined || value === null ? "" : String(value).trim();
+}
+
+function conditionMatches(value: string, operator: ExportRequiredWhenOperator, expected: readonly string[]): boolean {
+  const matches = expected.includes(value);
+  return operator === "is" || operator === "isOneOf" ? matches : !matches;
+}
+
+function simpleRuleMatches(value: string, rule: Extract<ExportValidationRule, { kind: "simple" }>): boolean {
+  if (!value) return true;
+  if (rule.validation === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  if (rule.validation === "url") { try { return Boolean(new URL(value)); } catch { return false; } }
+  if (rule.validation === "digitsOnly") return /^\d+$/.test(value);
+  if (rule.validation === "noDigits") return !/\d/.test(value);
+  if (rule.validation === "noSpaces") return !/\s/.test(value);
+  if (rule.validation === "contains") return value.includes(rule.value ?? "");
+  if (rule.validation === "doesNotContain") return !value.includes(rule.value ?? "");
+  if (rule.validation === "startsWith") return value.startsWith(rule.value ?? "");
+  return value.endsWith(rule.value ?? "");
 }
 
 function mappedValue(value: CustomFieldValue | undefined, mappings?: ExportValueMapping[]): CustomFieldValue | undefined {
@@ -147,11 +218,22 @@ export function buildTemplateExport(
       issues.push({ columnId: item.id, message: `The header '${header}' is duplicated.` });
     }
     seenHeaders.add(normalized);
-    if (!["canonical", "custom", "parameter", "empty"].includes(item.source.kind)) {
+    if (!["canonical", "custom", "fixed", "parameter", "empty"].includes(item.source.kind)) {
       issues.push({ columnId: item.id, message: `Column '${header || "Unnamed column"}' uses an unsupported value source.` });
     }
-    if (item.source.kind === "parameter" && item.required && isEmpty(parameters[item.source.key] ?? item.source.defaultValue)) {
+    const rules = rulesFor(item);
+    if (item.source.kind === "empty" && rules.some((rule) => rule.kind === "required" && rule.outcome === "block")) {
+      issues.push({ columnId: item.id, outcome: "block", message: `${item.header || "Unnamed column"} is required but configured to leave every value empty.` });
+    }
+    if (item.source.kind === "parameter" && rules.some((rule) => rule.kind === "required") && isEmpty(parameters[item.source.key] ?? item.source.defaultValue)) {
       issues.push({ columnId: item.id, message: `Enter ${item.source.label}.` });
+    }
+    for (const warning of item.sourceValidationWarnings ?? []) {
+      issues.push({ columnId: item.id, outcome: "review", message: `${item.header || "Unnamed column"}: ${warning}` });
+    }
+    const allowed = rules.find((rule): rule is Extract<ExportValidationRule, { kind: "allowedValues" }> => rule.kind === "allowedValues");
+    if (item.source.kind === "fixed" && allowed && !isEmpty(item.source.value) && !allowed.values.includes(item.source.value)) {
+      issues.push({ columnId: item.id, outcome: allowed.outcome, message: `${item.header || "Unnamed column"} fixed value is not allowed.` });
     }
   });
 
@@ -159,17 +241,49 @@ export function buildTemplateExport(
     key: `column_${index}`,
     header: item.header,
   }));
-  const rows = leads.map((lead) => Object.fromEntries(template.columns.map((item, index) => {
-    let value = mappedValue(sourceValue(lead, item.source, parameters), item.valueMappings);
-    if (isEmpty(value) && item.defaultValue !== undefined) value = item.defaultValue;
-    if (item.required && isEmpty(value)) {
-      issues.push({
-        columnId: item.id,
-        message: `${item.header || "Unnamed column"} is empty for source row ${lead.provenance.rowNumber}.`,
-      });
-    }
-    return [`column_${index}`, formattedValue(value, item.format, item.datePattern)];
-  })));
+  const byId = new Map(template.columns.map((column) => [column.id, column]));
+  const rows = leads.map((lead) => {
+    const resolved = new Map<string, ExportValue>();
+    const resolving = new Set<string>();
+    const resolve = (item: ExportTemplateColumn): ExportValue => {
+      const prior = resolved.get(item.id);
+      if (prior !== undefined) return prior;
+      if (resolving.has(item.id)) {
+        issues.push({ columnId: item.id, outcome: "block", message: `${item.header || "Unnamed column"} has a circular validation dependency.` });
+        return "";
+      }
+      resolving.add(item.id);
+      let value = sourceValue(lead, item.source, parameters);
+      if (isEmpty(value) && item.defaultValue !== undefined) value = item.defaultValue;
+      value = mappedValue(value, item.valueMappings);
+      const finalValue = formattedValue(value, item.format, item.datePattern);
+      resolved.set(item.id, finalValue);
+      resolving.delete(item.id);
+      return finalValue;
+    };
+    const output = template.columns.map((item, index) => {
+      const finalValue = resolve(item);
+      const value = displayValue(finalValue);
+      for (const rule of rulesFor(item)) {
+        let invalid = false;
+        if (rule.kind === "required") invalid = !value;
+        if (rule.kind === "requiredWhen") {
+          const parent = byId.get(rule.parentColumnId);
+          invalid = !parent || (conditionMatches(displayValue(resolve(parent)), rule.operator, rule.values) && !value);
+        }
+        if (rule.kind === "allowedValues") invalid = Boolean(value) && !rule.values.includes(value);
+        if (rule.kind === "dependentAllowedValues") {
+          const parent = byId.get(rule.parentColumnId);
+          const allowed = parent ? rule.cases[displayValue(resolve(parent))] : undefined;
+          invalid = !parent || (Boolean(value) && Boolean(allowed) && !allowed!.includes(value));
+        }
+        if (rule.kind === "simple") invalid = !simpleRuleMatches(value, rule);
+        if (invalid) issues.push({ columnId: item.id, outcome: rule.outcome, message: `${item.header || "Unnamed column"} is invalid for source row ${lead.provenance.rowNumber}.` });
+      }
+      return [`column_${index}`, finalValue];
+    });
+    return Object.fromEntries(output);
+  });
 
   return { columns, rows, issues };
 }
