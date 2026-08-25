@@ -1,5 +1,13 @@
 .templates-page-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 14px; }
 .templates-list-panel, .template-editor-panel, .template-structure-preview { padding: 20px 22px; }
+.template-heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.template-file-import { position: relative; overflow: hidden; cursor: pointer; }
+.template-file-import input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
+.template-file-import.disabled { cursor: wait; opacity: .6; }
+.template-import-review { padding: 0; }
+.template-import-review-fields { display: grid; gap: 16px; padding: 20px 22px; }
+.template-import-review-fields label { display: grid; gap: 7px; }
+.template-import-review-fields small { color: #6c7689; }
 
 .export-template-editor { display: grid; gap: 22px; }
 .export-template-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -74,6 +82,9 @@
 
 @media (max-width: 580px) {
   .templates-list-panel, .template-editor-panel, .template-structure-preview { padding: 18px 16px; }
+  .template-heading-actions { justify-content: stretch; }
+  .template-heading-actions .button { flex: 1 1 auto; text-align: center; }
+  .template-import-review-fields { padding: 18px 16px; }
   .export-template-meta, .export-column-fields, .optional-rules { grid-template-columns: 1fr; }
   .export-column-builder-heading { align-items: flex-start; flex-direction: column; }
   .export-column-builder-heading .button { width: 100%; }
