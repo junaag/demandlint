@@ -69,3 +69,10 @@ export {
   exportParameterColumns,
   templateColumnId,
 } from "./exportTemplates";
+export type {
+  ExportTemplateDraftSelection,
+  ExportTemplateFileAnalysis,
+  ExportTemplateFileSheet,
+  ExportTemplateHeaderRow,
+} from "./exportTemplateFileImport";
+export { createExportTemplateDraftFromFileAnalysis } from "./exportTemplateFileImport";

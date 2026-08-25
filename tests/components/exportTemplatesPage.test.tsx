@@ -8,6 +8,8 @@ describe("ExportTemplatesPage", () => {
 
     expect(html).toContain("No export templates yet.");
     expect(html).toContain("Create template");
+    expect(html).toContain("Import template file");
+    expect(html).toContain('accept=".csv,.xlsx,.xls');
   });
 
   it("exposes edit, duplicate, rename and delete actions for a workspace template", () => {
