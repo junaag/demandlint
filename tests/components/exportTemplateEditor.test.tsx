@@ -4,46 +4,37 @@ import { createExportTemplateDraft } from "../../src/application/exportTemplates
 import { ExportTemplateEditor } from "../../src/components/ExportTemplateEditor";
 
 describe("ExportTemplateEditor", () => {
-  it("uses non-technical terminology and only shows spreadsheet options for Excel", () => {
+  it("uses the generic column-source terminology and one empty-value policy", () => {
     const html = renderToStaticMarkup(<ExportTemplateEditor template={createExportTemplateDraft()} onChange={() => undefined} />);
-
     expect(html).toContain("Column name");
-    expect(html).toContain("Value Source");
+    expect(html).toContain("Column source");
     expect(html).toContain("Mapped field");
-    expect(html).toContain("Fixed value");
+    expect(html).toContain("Fixed field");
     expect(html).toContain("Leave empty");
+    expect(html).not.toContain("Value Source");
+    expect(html).not.toContain("Fixed value");
     expect(html).toContain("Source field");
-    expect(html).toContain("If empty, use");
+    expect(html).toContain("Empty value handling");
+    expect(html).toContain("Value required");
+    expect(html).toContain("Replace empty value with…");
+    expect(html).toContain("If value is empty, leave blank");
+    expect(html).toContain("Replace values");
     expect(html).not.toContain("Worksheet name");
-    expect(html).toContain("Optional rules");
-    expect(html).toContain("Column order is exact. Leave empty keeps the column but leaves every cell blank.");
-    expect(html).toContain("E.g. CRM, event platform or internal process.");
-    expect(html).toContain("Choose where DemandLint should get the value for this column.");
-    expect(html).toContain("Export is blocked if this final value is empty.");
-    expect(html).toMatch(/class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div>/);
-    expect(html).toMatch(/<header class="export-column-card-header"><div class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div><div class="column-card-actions"><button[^>]*>×<\/button><\/div><\/header>/);
-    expect(html.indexOf('class="export-column-card-header"')).toBeLessThan(html.indexOf("Optional rules"));
   });
 
-  it("shows the worksheet setting for XLSX and the fixed-value fields for a parameter column", () => {
-    const template = createExportTemplateDraft({
-      defaultFormat: "xlsx",
-      columns: [{ id: "program", header: "Program", source: { kind: "parameter", key: "program", label: "Program" }, required: true }],
-    });
+  it("shows an allowed-values reference without a fixed-value input during design", () => {
+    const template = createExportTemplateDraft({ defaultFormat: "xlsx", columns: [{ id: "channel", header: "Channel", source: { kind: "fixed" }, validationRules: [{ kind: "allowedValues", outcome: "block", values: ["Webinar", "Event"] }] }] });
     const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
-
     expect(html).toContain("Worksheet name");
-    expect(html).toContain("Fixed value");
-    expect(html).toContain("Required");
+    expect(html).toContain("Allowed values · 2 values");
+    expect(html).not.toContain("Fixed value");
+    expect(html).not.toContain("Replace values");
   });
 
-  it("hides Required for an empty column while retaining its header actions", () => {
-    const template = createExportTemplateDraft({
-      columns: [{ id: "empty", header: "Reserved", source: { kind: "empty" } }],
-    });
+  it("keeps empty columns free of contradictory empty-value controls", () => {
+    const template = createExportTemplateDraft({ columns: [{ id: "empty", header: "Reserved", source: { kind: "empty" } }] });
     const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
-
-    expect(html).not.toContain("Export is blocked if this final value is empty.");
-    expect(html).toMatch(/<header class="export-column-card-header"><div class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div><div class="column-card-actions"><button[^>]*>×<\/button><\/div><\/header>/);
+    expect(html).not.toContain("Empty value handling");
+    expect(html).toMatch(/class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div>/);
   });
 });

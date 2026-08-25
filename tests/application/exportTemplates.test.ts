@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTemplateExport,
+  CANONICAL_FIELD_OPTIONS,
   cloneExportTemplate,
   createExportTemplateDraft,
+  exportRuntimeColumns,
+  normalizeExportTemplate,
   type ExportTemplate,
 } from "../../src/application/exportTemplates";
 import type { CanonicalLead } from "../../src/core/domain";
@@ -124,5 +127,38 @@ describe("destination export templates", () => {
     const { email: _email, ...withoutEmail } = lead;
     const output = buildTemplateExport({ ...template, columns: [{ id: "legacy", header: "Email", source: { kind: "canonical", field: "email" }, required: true }] }, [withoutEmail]);
     expect(output.issues.some((issue) => issue.outcome === "block")).toBe(true);
+  });
+
+  it("resolves a fixed field at runtime for every row without persisting it", () => {
+    const fixed = { id: "channel", header: "Import Channel", source: { kind: "fixed" as const }, emptyValueHandling: { kind: "required" as const }, validationRules: [{ kind: "allowedValues" as const, outcome: "block" as const, values: ["Webinar", "Event"] }] };
+    const output = buildTemplateExport({ ...template, columns: [fixed] }, [lead, { ...lead, recordId: "lead-2" }], { channel: "Webinar" });
+    expect(output.rows).toEqual([{ column_0: "Webinar" }, { column_0: "Webinar" }]);
+    expect(output.issues).toEqual([]);
+    expect(exportRuntimeColumns({ ...template, columns: [fixed] }).map((column) => column.id)).toEqual(["channel"]);
+    expect(normalizeExportTemplate({ ...template, columns: [{ ...fixed, source: { kind: "fixed", value: "Event" }, required: true }] }).columns[0]?.source).toEqual({ kind: "fixed" });
+  });
+
+  it("uses one empty-value policy before final allowed-value validation", () => {
+    const column = { id: "status", header: "Status", source: { kind: "custom" as const, key: "status" }, emptyValueHandling: { kind: "replace" as const, value: "Unknown" }, validationRules: [{ kind: "allowedValues" as const, outcome: "block" as const, values: ["Unknown", "Active"] }] };
+    expect(buildTemplateExport({ ...template, columns: [column] }, [{ ...lead, customFields: { status: "" } }]).rows[0]).toEqual({ column_0: "Unknown" });
+    const invalid = buildTemplateExport({ ...template, columns: [{ ...column, emptyValueHandling: { kind: "replace" as const, value: "Invalid" } }] }, [{ ...lead, customFields: { status: "" } }]);
+    expect(invalid.issues.some((issue) => issue.outcome === "block")).toBe(true);
+  });
+
+  it("keeps workflow-specific legacy identifiers compatible but out of canonical suggestions", () => {
+    const current = CANONICAL_FIELD_OPTIONS.map((option) => option.value);
+    expect(current).not.toContain("campaignId");
+    expect(current).not.toContain("leadSource");
+    expect(current).not.toContain("utmCampaign");
+    expect(CANONICAL_FIELD_OPTIONS.find((option) => option.value === "marketingConsent")?.label).toBe("Contact Opt-in");
+  });
+
+  it("keeps dependent allowed-value links intact when saving a template as new", () => {
+    const original = { ...template, columns: [
+      { id: "country", header: "Country", source: { kind: "fixed" as const }, validationRules: [{ kind: "allowedValues" as const, outcome: "block" as const, values: ["US"] }] },
+      { id: "state", header: "State", source: { kind: "fixed" as const }, validationRules: [{ kind: "dependentAllowedValues" as const, outcome: "block" as const, parentColumnId: "country", cases: { US: ["CA"] } }] },
+    ] };
+    const cloned = cloneExportTemplate(original);
+    expect(cloned.columns[1]?.validationRules?.[0]).toMatchObject({ parentColumnId: cloned.columns[0]?.id });
   });
 });

@@ -3,7 +3,7 @@ import {
   buildTemplateExport,
   cloneExportTemplate,
   createExportTemplateDraft,
-  exportParameterColumns,
+  exportRuntimeColumns,
   exportTemplateId,
   type ExportParameterValues,
   type ExportTemplate,
@@ -37,7 +37,7 @@ export function ExportPreparation({ result, templates, organizationId, onSave }:
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const active = workflow[workflow.mode];
   const { draft, format, parameters } = active;
-  const parameterColumns = useMemo(() => exportParameterColumns(draft), [draft]);
+  const runtimeColumns = useMemo(() => exportRuntimeColumns(draft), [draft]);
   const output = useMemo(() => buildTemplateExport(draft, result.ready, parameters), [draft, result.ready, parameters]);
   const previewRows = output.rows.slice(0, 5);
   const uniqueIssues = [...new Map(output.issues.map((issue) => [issue.message, issue])).values()];
@@ -105,16 +105,22 @@ export function ExportPreparation({ result, templates, organizationId, onSave }:
 
     {workflow.mode === "template" && <div className="template-source-actions">
       {templates.length === 0 ? <div className="empty-state"><strong>No workspace templates yet.</strong><span>Create one from Custom export, then select it here.</span></div> : <label><span>Workspace template</span><select value={selectedTemplateId} onChange={(event) => selectTemplate(event.target.value)}><option value="">Select a template</option>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>}
-      {templateSelected && <div className="template-configuration"><div><h3>Template structure</h3><p>{draft.destinationType || "No destination label"}{draft.sheetName ? ` · Worksheet: ${draft.sheetName}` : ""}</p></div><ol>{draft.columns.map((column) => <li key={column.id}><strong>{column.header || "(blank header)"}</strong><span>{column.source.kind === "parameter" ? `Fixed value: ${column.source.label}` : column.source.kind === "fixed" ? "Fixed value" : column.source.kind === "empty" ? "Leave empty" : "Mapped field"}</span></li>)}</ol></div>}
+      {templateSelected && <div className="template-configuration"><div><h3>Template structure</h3><p>{draft.destinationType || "No destination label"}{draft.sheetName ? ` · Worksheet: ${draft.sheetName}` : ""}</p></div><ol>{draft.columns.map((column) => <li key={column.id}><strong>{column.header || "(blank header)"}</strong><span>{column.source.kind === "parameter" || column.source.kind === "fixed" ? "Fixed field" : column.source.kind === "empty" ? "Leave empty" : "Mapped field"}</span></li>)}</ol></div>}
     </div>}
 
     {workflow.mode === "custom" && <ExportTemplateEditor template={draft} onChange={setDraft} heading="Included output columns" />}
 
     {(templateSelected || workflow.mode === "custom") && <>
-      {parameterColumns.length > 0 && <div className="export-parameters"><div><h3>Values for this export</h3><p>These values apply to every exported row and are not saved in the template.</p></div><div className="parameter-grid">{parameterColumns.map((column) => {
-        if (column.source.kind !== "parameter") return null;
-        const source = column.source;
-        return <label key={source.key}><span>{source.label}{column.required ? " *" : ""}</span><input value={parameters[source.key] ?? ""} placeholder={source.defaultValue} onChange={(event) => setParameters((current) => ({ ...current, [source.key]: event.target.value }))} /></label>;
+      {runtimeColumns.length > 0 && <div className="export-parameters"><div><h3>Values for this export</h3><p>These values apply to every exported row and are not saved in the template.</p></div><div className="parameter-grid">{runtimeColumns.map((column) => {
+        const allowed = column.validationRules?.find((rule): rule is Extract<typeof rule, { kind: "allowedValues" }> => rule.kind === "allowedValues");
+        const dependent = column.validationRules?.find((rule): rule is Extract<typeof rule, { kind: "dependentAllowedValues" }> => rule.kind === "dependentAllowedValues");
+        const parent = dependent ? draft.columns.find((candidate) => candidate.id === dependent.parentColumnId) : undefined;
+        const dependentValues = dependent && parent?.source.kind === "fixed" ? dependent.cases[parameters[parent.id] ?? ""] : undefined;
+        const allowedValues = allowed?.values ?? dependentValues;
+        const key = column.source.kind === "parameter" ? column.source.key : column.id;
+        const label = column.source.kind === "parameter" ? column.source.label : column.header;
+        const required = column.emptyValueHandling?.kind === "required" || column.required;
+        return <label key={column.id}><span>{label}{required ? " *" : ""}</span>{allowedValues ? <select value={parameters[key] ?? ""} onChange={(event) => setParameters((current) => ({ ...current, [key]: event.target.value }))}><option value="">Select a value</option>{allowedValues.map((value) => <option key={value} value={value}>{value}</option>)}</select> : <input value={parameters[key] ?? ""} onChange={(event) => setParameters((current) => ({ ...current, [key]: event.target.value }))} />}</label>;
       })}</div></div>}
       <div className="export-preview-block"><div className="export-preview-heading"><div><h3>Exact output preview</h3><p>First {Math.min(5, result.ready.length)} of {result.ready.length} ready rows.</p></div>{uniqueIssues.length > 0 && <span className="validation-count">{output.issues.length} validation issue{output.issues.length === 1 ? "" : "s"}</span>}</div>{uniqueIssues.length > 0 && <ul className="export-validation-list">{uniqueIssues.slice(0, 5).map((issue) => <li key={`${issue.columnId}-${issue.message}`}>{issue.message}</li>)}</ul>}<div className="export-preview-table-wrap"><table className="export-preview-table"><thead><tr>{output.columns.map((column) => <th key={column.key}>{column.header || "(blank header)"}</th>)}</tr></thead><tbody>{previewRows.map((row, rowIndex) => <tr key={rowIndex}>{output.columns.map((column) => <td key={column.key}>{displayExportValue(row[column.key])}</td>)}</tr>)}</tbody></table></div></div>
       <div className="prepare-export-actions"><div className="template-management-actions">{workflow.mode === "custom" && <button className="button secondary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveAsTemplate()}>{busy === "save" ? "Saving…" : "Save as template"}</button>}</div><div className="download-ready-actions"><label><span>File format</span><select value={format} onChange={(event) => setFormat(event.target.value as DataExportFormat)}>{FORMAT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><button className="button primary" type="button" disabled={busy !== null || output.issues.some((issue) => issue.outcome !== "review") || result.ready.length === 0} onClick={() => void download()}>{busy === "download" ? "Creating…" : `Export ${result.ready.length} ready rows`}</button></div></div>

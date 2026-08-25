@@ -148,6 +148,13 @@ describe("export template file analyzer", () => {
     expect((target?.columnValidations?.[1]?.rules[0] as { values: string[] }).values).toHaveLength(275);
   });
 
+  it("detects modern OpenXML list validations with nested x14/xm formula markup", async () => {
+    const analysis = await analyzeExportTemplateFile(workbookWithValidations([
+      { name: "Target", rows: [["Channel"], [""]], validationXml: "<x14:dataValidations xmlns:x14=\"http://schemas.microsoft.com/office/spreadsheetml/2009/9/main\" xmlns:xm=\"http://schemas.microsoft.com/office/excel/2006/main\"><x14:dataValidation type=\"list\"><x14:formula1><xm:f>\"Webinar,Event\"</xm:f></x14:formula1><xm:sqref>A2:A100</xm:sqref></x14:dataValidation></x14:dataValidations>" },
+    ]));
+    expect(analysis.sheets[0]?.columnValidations?.[0]?.rules).toEqual([{ kind: "allowedValues", outcome: "block", values: ["Webinar", "Event"] }]);
+  });
+
   it("normalizes two generic single-parent dependent dropdown patterns", async () => {
     const analysis = await analyzeExportTemplateFile(workbookWithValidations([
       { name: "Target", rows: [["Parent A", "Child A", "Parent B", "Child B"], ["", "", "", ""]], validationXml: "<dataValidations count=\"4\"><dataValidation type=\"list\" sqref=\"A2:A100\"><formula1>\"North,South\"</formula1></dataValidation><dataValidation type=\"list\" sqref=\"B2:B100\"><formula1>=INDIRECT($A2)</formula1></dataValidation><dataValidation type=\"list\" sqref=\"C2:C100\"><formula1>\"Online,Event\"</formula1></dataValidation><dataValidation type=\"list\" sqref=\"D2:D100\"><formula1>=INDIRECT($C2)</formula1></dataValidation></dataValidations>" },

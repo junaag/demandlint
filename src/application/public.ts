@@ -51,6 +51,7 @@ export {
 } from "./mapping/contracts";
 export type {
   ExportColumnSource,
+  EmptyValueHandling,
   ExportDatePattern,
   ExportParameterValues,
   ExportTemplate,
@@ -66,11 +67,16 @@ export type {
 export {
   CANONICAL_FIELD_LABELS,
   CANONICAL_FIELD_OPTIONS,
+  CURRENT_CANONICAL_FIELDS,
   buildTemplateExport,
   cloneExportTemplate,
+  copyExportTemplate,
   createExportTemplateDraft,
   exportTemplateId,
   exportParameterColumns,
+  exportRuntimeColumns,
+  emptyValueHandlingFor,
+  normalizeExportTemplate,
   templateColumnId,
 } from "./exportTemplates";
 export type {

@@ -1,4 +1,4 @@
-import type { ExportTemplate } from "../../application/exportTemplates";
+import { normalizeExportTemplate, type ExportTemplate } from "../../application/exportTemplates";
 import type { ExportTemplateRepository } from "../../application/ports/exportTemplateRepository";
 import { getSupabaseClient } from "./client";
 
@@ -55,17 +55,18 @@ export class SupabaseExportTemplateRepository implements ExportTemplateRepositor
 
   async save(template: ExportTemplate): Promise<void> {
     if (!template.organizationId) throw new Error("An export template must belong to an organization.");
+    const normalized = normalizeExportTemplate(template);
     const config = {
-      columns: template.columns,
-      defaultFormat: template.defaultFormat,
-      delimiter: template.delimiter,
-      sheetName: template.sheetName,
+      columns: normalized.columns,
+      defaultFormat: normalized.defaultFormat,
+      delimiter: normalized.delimiter,
+      sheetName: normalized.sheetName,
     };
     const { error } = await getSupabaseClient().from("export_templates").upsert({
-      id: template.id,
-      organization_id: template.organizationId,
-      name: template.name,
-      destination_type: destinationTypeForStorage(template.destinationType),
+      id: normalized.id,
+      organization_id: normalized.organizationId,
+      name: normalized.name,
+      destination_type: destinationTypeForStorage(normalized.destinationType),
       config,
       updated_at: new Date().toISOString(),
     });

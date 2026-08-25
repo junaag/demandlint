@@ -1,5 +1,5 @@
 import type { ExportTemplate } from "../application/exportTemplates";
-import { cloneExportTemplate } from "../application/exportTemplates";
+import { copyExportTemplate, normalizeExportTemplate } from "../application/exportTemplates";
 import { localExportTemplateRepository } from "../adapters/browser/localExportTemplateRepository";
 import { isSupabaseConfigured } from "../adapters/supabase/client";
 import { supabaseExportTemplateRepository } from "../adapters/supabase/supabaseExportTemplateRepository";
@@ -18,11 +18,11 @@ export async function saveBrowserExportTemplate(
 ): Promise<ExportTemplate> {
   const name = template.name.trim();
   if (!name) throw new Error("Enter a template name.");
-  const saved = cloneExportTemplate(template, {
+  const saved = normalizeExportTemplate(copyExportTemplate(template, {
     id: template.id,
     organizationId,
     name,
-  });
+  }));
   await repository().save(saved);
   return saved;
 }

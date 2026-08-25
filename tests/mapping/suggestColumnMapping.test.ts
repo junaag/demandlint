@@ -23,13 +23,11 @@ describe("deterministic column mapping", () => {
       "Job Role": "jobTitle",
       Téléphone: "phone",
       Pays: "country",
-      "Lead Source": "leadSource",
-      "Campaign Member Status": "campaignMemberStatus",
     });
-    expect(plan.autoMappedCount).toBe(9);
+    expect(plan.autoMappedCount).toBe(7);
     expect(plan.reviewCount).toBe(0);
     expect(plan.ambiguousCount).toBe(0);
-    expect(plan.unmappedCount).toBe(0);
+    expect(plan.unmappedCount).toBe(2);
   });
 
   it("auto-maps common Spanish aliases", () => {
@@ -53,13 +51,11 @@ describe("deterministic column mapping", () => {
       Cargo: "jobTitle",
       Teléfono: "phone",
       País: "country",
-      "Fuente del lead": "leadSource",
-      "Estado del miembro de campaña": "campaignMemberStatus",
     });
-    expect(plan.autoMappedCount).toBe(9);
+    expect(plan.autoMappedCount).toBe(7);
     expect(plan.reviewCount).toBe(0);
     expect(plan.ambiguousCount).toBe(0);
-    expect(plan.unmappedCount).toBe(0);
+    expect(plan.unmappedCount).toBe(2);
   });
 
   it("auto-maps common Portuguese aliases", () => {
@@ -83,13 +79,11 @@ describe("deterministic column mapping", () => {
       Função: "jobTitle",
       Telemóvel: "phoneMobile",
       País: "country",
-      "Fonte do lead": "leadSource",
-      "Estado do membro da campanha": "campaignMemberStatus",
     });
-    expect(plan.autoMappedCount).toBe(9);
+    expect(plan.autoMappedCount).toBe(7);
     expect(plan.reviewCount).toBe(0);
     expect(plan.ambiguousCount).toBe(0);
-    expect(plan.unmappedCount).toBe(0);
+    expect(plan.unmappedCount).toBe(2);
   });
 
   it("treats canonical labels as high confidence", () => {

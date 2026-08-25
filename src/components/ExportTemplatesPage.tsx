@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cloneExportTemplate, createExportTemplateDraft, exportTemplateId, type ExportTemplate } from "../application/exportTemplates";
+import { cloneExportTemplate, copyExportTemplate, createExportTemplateDraft, exportTemplateId, type ExportTemplate } from "../application/exportTemplates";
 import {
   createExportTemplateDraftFromFileAnalysis,
   type ExportTemplateFileAnalysis,
@@ -16,7 +16,7 @@ interface ExportTemplatesPageProps {
 }
 
 function copyTemplate(template: ExportTemplate): ExportTemplate {
-  return cloneExportTemplate(template, {
+  return copyExportTemplate(template, {
     id: template.id,
     ...(template.organizationId ? { organizationId: template.organizationId } : {}),
     builtIn: false,
@@ -25,7 +25,7 @@ function copyTemplate(template: ExportTemplate): ExportTemplate {
 
 function previewSourceLabel(template: ExportTemplate["columns"][number]): string {
   return template.source.kind === "canonical" || template.source.kind === "custom" ? "Mapped field"
-    : template.source.kind === "fixed" || template.source.kind === "parameter" ? "Fixed value"
+    : template.source.kind === "fixed" || template.source.kind === "parameter" ? "Fixed field"
         : "Leave empty";
 }
 
@@ -56,12 +56,14 @@ export function TemplateStructurePreview({ template }: { template: ExportTemplat
 
 export function ExportTemplatesPage({ templates, organizationId, onSave, onDelete }: ExportTemplatesPageProps) {
   const [draft, setDraft] = useState<ExportTemplate | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [importReview, setImportReview] = useState<ImportReview | null>(null);
   const [busy, setBusy] = useState<"save" | "delete" | "import" | null>(null);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   function createTemplate() {
     setDraft(createExportTemplateDraft({ organizationId }));
+    setEditingTemplateId(null);
     setImportReview(null);
     setMessage(null);
   }
@@ -73,6 +75,7 @@ export function ExportTemplatesPage({ templates, organizationId, onSave, onDelet
       const sheet = analysis.sheets.find((candidate) => candidate.name === analysis.selectedSheetName);
       if (!analysis.requiresSheetSelection && sheet && !sheet.requiresHeaderReview) {
         setDraft(createExportTemplateDraftFromFileAnalysis(analysis, { organizationId }));
+        setEditingTemplateId(null);
       } else {
         setImportReview({
           analysis,
@@ -106,12 +109,14 @@ export function ExportTemplatesPage({ templates, organizationId, onSave, onDelet
       sheetName: sheet.name,
       ...(importReview.headerRowNumber ? { headerRowNumber: Number(importReview.headerRowNumber) } : {}),
     }));
+    setEditingTemplateId(null);
     setImportReview(null);
     setMessage(null);
   }
 
   function editTemplate(template: ExportTemplate) {
     setDraft(copyTemplate(template));
+    setEditingTemplateId(template.id);
     setImportReview(null);
     setMessage(null);
   }
@@ -120,6 +125,7 @@ export function ExportTemplatesPage({ templates, organizationId, onSave, onDelet
     setDraft(cloneExportTemplate(template, {
       id: exportTemplateId(), organizationId, name: `${template.name} copy`, builtIn: false,
     }));
+    setEditingTemplateId(null);
     setImportReview(null);
     setMessage(null);
   }
@@ -142,20 +148,21 @@ export function ExportTemplatesPage({ templates, organizationId, onSave, onDelet
     setBusy("delete"); setMessage(null);
     try {
       await onDelete(template.id);
-      if (draft?.id === template.id) setDraft(null);
+      if (draft?.id === template.id) { setDraft(null); setEditingTemplateId(null); }
       setMessage({ kind: "success", text: "Template deleted." });
     } catch (caught) {
       setMessage({ kind: "error", text: caught instanceof Error ? caught.message : "The template could not be deleted." });
     } finally { setBusy(null); }
   }
 
-  async function saveDraft() {
+  async function saveDraft(asNew = false) {
     if (!draft) return;
     setBusy("save"); setMessage(null);
     try {
-      const saved = await onSave({ ...draft, organizationId, builtIn: false });
+      const saved = await onSave(asNew ? cloneExportTemplate(draft, { id: exportTemplateId(), organizationId, builtIn: false }) : { ...draft, organizationId, builtIn: false });
       setDraft(copyTemplate(saved));
-      setMessage({ kind: "success", text: "Template saved." });
+      setEditingTemplateId(saved.id);
+      setMessage({ kind: "success", text: asNew ? "New template saved." : editingTemplateId ? "Template changes saved." : "Template saved." });
     } catch (caught) {
       setMessage({ kind: "error", text: caught instanceof Error ? caught.message : "The template could not be saved." });
     } finally { setBusy(null); }
@@ -169,7 +176,7 @@ export function ExportTemplatesPage({ templates, organizationId, onSave, onDelet
         {templates.length === 0 ? <div className="empty-state"><strong>No export templates yet.</strong><span>Create one manually, then use it from Prepare Export.</span></div> : <ul className="templates-list">{templates.map((template) => <li key={template.id}><div><strong>{template.name}</strong><span>{template.destinationType || "No destination label"} · {template.columns.length} columns · {template.defaultFormat.toUpperCase()}</span></div><div className="template-list-actions"><button type="button" onClick={() => editTemplate(template)}>Edit</button><button type="button" onClick={() => duplicateTemplate(template)}>Duplicate</button><button type="button" onClick={() => void renameTemplate(template)} disabled={busy !== null}>Rename</button><button className="text-danger-button" type="button" onClick={() => void deleteTemplate(template)} disabled={busy !== null}>Delete</button></div></li>)}</ul>}
       </section>
       {importReview && (() => { const sheet = reviewSheet(importReview); return <section className="panel template-import-review"><div className="section-heading"><div><p className="section-label">REVIEW IMPORT</p><h2>Create draft from file</h2><p>{importReview.analysis.fileName}</p></div><button className="text-button" type="button" onClick={() => setImportReview(null)}>Cancel</button></div><div className="template-import-review-fields">{importReview.analysis.requiresSheetSelection && <label><span>Worksheet</span><small>No lead-based worksheet selection is applied.</small><select value={importReview.sheetName} onChange={(event) => selectImportSheet(event.target.value)}><option value="">Select a worksheet</option>{importReview.analysis.sheets.map((candidate) => <option key={candidate.name} value={candidate.name} disabled={!candidate.usable}>{candidate.name}{candidate.usable ? ` · ${candidate.columnCount} columns` : " · no usable header"}</option>)}</select></label>}{sheet?.requiresHeaderReview && <label><span>Header row</span><small>Confirm which row defines the target columns.</small><select value={importReview.headerRowNumber} onChange={(event) => setImportReview({ ...importReview, headerRowNumber: event.target.value })}>{sheet.headerRows.map((row) => <option key={row.rowNumber} value={row.rowNumber}>{headerRowLabel(row.headers, row.rowNumber)}</option>)}</select></label>}<div className="template-editor-actions"><button className="button primary" type="button" disabled={!sheet || (sheet.requiresHeaderReview && !importReview.headerRowNumber)} onClick={createImportedDraft}>Create draft</button></div></div></section>; })()}
-      {draft && <><section className="panel template-editor-panel"><div className="section-heading"><div><p className="section-label">{templates.some((template) => template.id === draft.id) ? "EDIT TEMPLATE" : "CREATE TEMPLATE"}</p><h2>{draft.name || "Untitled template"}</h2></div><button className="text-button" type="button" onClick={() => setDraft(null)}>Close</button></div><ExportTemplateEditor template={draft} onChange={setDraft} /><div className="template-editor-actions"><button className="button primary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : "Save template"}</button></div></section><TemplateStructurePreview template={draft} /></>}
+      {draft && <><section className="panel template-editor-panel"><div className="section-heading"><div><p className="section-label">{editingTemplateId ? "EDIT TEMPLATE" : "CREATE TEMPLATE"}</p><h2>{draft.name || "Untitled template"}</h2></div><button className="text-button" type="button" onClick={() => { setDraft(null); setEditingTemplateId(null); }}>Close</button></div><ExportTemplateEditor template={draft} onChange={setDraft} /><div className="template-editor-actions"><button className="button primary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : editingTemplateId ? "Save changes" : "Save template"}</button>{editingTemplateId && <button className="button secondary" type="button" disabled={busy !== null || !draft.name.trim()} onClick={() => void saveDraft(true)}>Save as new template</button>}</div></section><TemplateStructurePreview template={draft} /></>}
     </div>
   </section>;
 }

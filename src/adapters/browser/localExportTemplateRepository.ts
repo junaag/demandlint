@@ -1,4 +1,4 @@
-import type { ExportTemplate } from "../../application/exportTemplates";
+import { normalizeExportTemplate, type ExportTemplate } from "../../application/exportTemplates";
 import type { ExportTemplateRepository } from "../../application/ports/exportTemplateRepository";
 
 interface StorageLike {
@@ -29,8 +29,9 @@ export class LocalExportTemplateRepository implements ExportTemplateRepository {
     if (!template.organizationId) throw new Error("An export template must belong to an organization.");
     const templates = this.read();
     const index = templates.findIndex((candidate) => candidate.id === template.id);
-    if (index >= 0) templates[index] = template;
-    else templates.push(template);
+    const normalized = normalizeExportTemplate(template);
+    if (index >= 0) templates[index] = normalized;
+    else templates.push(normalized);
     this.write(templates);
   }
 
@@ -42,6 +43,8 @@ export class LocalExportTemplateRepository implements ExportTemplateRepository {
     if (!this.storage) return [];
     try {
       const parsed = JSON.parse(this.storage.getItem(STORAGE_KEY) ?? "[]");
+      // Keep an unsaved legacy fixed value available for a one-time export. It
+      // is normalized and removed only when the template is explicitly saved.
       return Array.isArray(parsed) ? parsed as ExportTemplate[] : [];
     } catch {
       return [];

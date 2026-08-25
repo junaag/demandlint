@@ -6,8 +6,9 @@ export type ExportValue = string | number | boolean | Date | null;
 export type ExportColumnSource =
   | { kind: "canonical"; field: CanonicalField }
   | { kind: "custom"; key: string }
-  | { kind: "fixed"; value: string }
-  // Retained only to deserialize v0.3.7 templates. New templates use fixed values.
+  /** Runtime value is supplied by column id when the template is used. */
+  | { kind: "fixed"; value?: string }
+  // Retained only to deserialize v0.3.7 templates.
   | { kind: "parameter"; key: string; label: string; defaultValue?: string }
   | { kind: "empty" };
 
@@ -18,6 +19,11 @@ export interface ExportValueMapping {
   from: string;
   to: string;
 }
+
+export type EmptyValueHandling =
+  | { kind: "required" }
+  | { kind: "replace"; value: string }
+  | { kind: "leaveBlank" };
 
 export type ExportValidationOutcome = "block" | "review";
 export type ExportRequiredWhenOperator = "is" | "isNot" | "isOneOf" | "isNotOneOf";
@@ -36,11 +42,13 @@ export interface ExportTemplateColumn {
   id: string;
   header: string;
   source: ExportColumnSource;
+  /** The one mutually-exclusive policy for an empty resolved value. */
+  emptyValueHandling?: EmptyValueHandling;
   /** v0.3.8 normalized validation rules. `required` below is read as a legacy rule. */
   validationRules?: ExportValidationRule[];
   /** Structured source rules that were detected but could not safely be normalized. */
   sourceValidationWarnings?: string[];
-  /** v0.3.7 compatibility only; use a `required` validation rule for new templates. */
+  /** v0.3.8 compatibility only. Normalized on template persistence. */
   required?: boolean;
   defaultValue?: string;
   format?: ExportValueFormat;
@@ -107,13 +115,21 @@ export const CANONICAL_FIELD_LABELS: Record<CanonicalField, string> = {
   utmCampaign: "UTM campaign",
   utmContent: "UTM content",
   initialResponseDate: "Initial response date",
-  marketingConsent: "Marketing consent",
+  marketingConsent: "Contact Opt-in",
   salesFollowUpRequested: "Sales follow-up requested",
   contactNotes: "Contact notes",
 };
 
-export const CANONICAL_FIELD_OPTIONS = Object.entries(CANONICAL_FIELD_LABELS).map(
-  ([value, label]) => ({ value: value as CanonicalField, label }),
+/** Current, broadly reusable DemandLint concepts. Older ids remain readable for saved mappings. */
+export const CURRENT_CANONICAL_FIELDS: CanonicalField[] = [
+  "firstName", "lastName", "email", "emailProfessional", "emailSecondary", "emailPersonal",
+  "company", "jobTitle", "phone", "phoneMobile", "phoneDirect", "phoneStandard", "country",
+  "stateProvince", "city", "postalCode", "address", "salutation", "jobLevel", "department",
+  "website", "industry", "marketingConsent",
+];
+
+export const CANONICAL_FIELD_OPTIONS = CURRENT_CANONICAL_FIELDS.map(
+  (value) => ({ value, label: CANONICAL_FIELD_LABELS[value] }),
 );
 
 function isEmpty(value: unknown): boolean {
@@ -122,21 +138,28 @@ function isEmpty(value: unknown): boolean {
 
 function sourceValue(
   lead: CanonicalLead,
+  columnId: string,
   source: ExportColumnSource,
   parameters: ExportParameterValues,
 ): CustomFieldValue | undefined {
   if (source.kind === "canonical") return lead[source.field] as CustomFieldValue | undefined;
   if (source.kind === "custom") return lead.customFields?.[source.key];
-  if (source.kind === "fixed") return source.value;
+  // `source.value` exists only on a legacy v0.3.8 record that has not yet been saved.
+  if (source.kind === "fixed") return parameters[columnId] ?? source.value;
   if (source.kind === "parameter") return parameters[source.key] ?? source.defaultValue;
   return "";
 }
 
+export function emptyValueHandlingFor(column: ExportTemplateColumn): EmptyValueHandling {
+  if (column.emptyValueHandling) return column.emptyValueHandling;
+  // A legacy default took precedence in the previous execution pipeline.
+  if (column.defaultValue !== undefined) return { kind: "replace", value: column.defaultValue };
+  if (column.required || column.validationRules?.some((rule) => rule.kind === "required")) return { kind: "required" };
+  return { kind: "leaveBlank" };
+}
+
 function rulesFor(column: ExportTemplateColumn): ExportValidationRule[] {
-  const rules = column.validationRules ?? [];
-  return column.required && !rules.some((rule) => rule.kind === "required")
-    ? [{ kind: "required", outcome: "block" }, ...rules]
-    : rules;
+  return (column.validationRules ?? []).filter((rule) => rule.kind !== "required");
 }
 
 function displayValue(value: ExportValue | undefined): string {
@@ -222,17 +245,16 @@ export function buildTemplateExport(
       issues.push({ columnId: item.id, message: `Column '${header || "Unnamed column"}' uses an unsupported value source.` });
     }
     const rules = rulesFor(item);
-    if (item.source.kind === "empty" && rules.some((rule) => rule.kind === "required" && rule.outcome === "block")) {
-      issues.push({ columnId: item.id, outcome: "block", message: `${item.header || "Unnamed column"} is required but configured to leave every value empty.` });
-    }
-    if (item.source.kind === "parameter" && rules.some((rule) => rule.kind === "required") && isEmpty(parameters[item.source.key] ?? item.source.defaultValue)) {
+    const emptyHandling = emptyValueHandlingFor(item);
+    if (item.source.kind === "parameter" && emptyHandling.kind === "required" && isEmpty(parameters[item.source.key] ?? item.source.defaultValue)) {
       issues.push({ columnId: item.id, message: `Enter ${item.source.label}.` });
     }
     for (const warning of item.sourceValidationWarnings ?? []) {
       issues.push({ columnId: item.id, outcome: "review", message: `${item.header || "Unnamed column"}: ${warning}` });
     }
     const allowed = rules.find((rule): rule is Extract<ExportValidationRule, { kind: "allowedValues" }> => rule.kind === "allowedValues");
-    if (item.source.kind === "fixed" && allowed && !isEmpty(item.source.value) && !allowed.values.includes(item.source.value)) {
+    const fixedValue = item.source.kind === "fixed" ? parameters[item.id] ?? item.source.value : undefined;
+    if (item.source.kind === "fixed" && allowed && !isEmpty(fixedValue) && !allowed.values.includes(fixedValue!)) {
       issues.push({ columnId: item.id, outcome: allowed.outcome, message: `${item.header || "Unnamed column"} fixed value is not allowed.` });
     }
   });
@@ -253,8 +275,9 @@ export function buildTemplateExport(
         return "";
       }
       resolving.add(item.id);
-      let value = sourceValue(lead, item.source, parameters);
-      if (isEmpty(value) && item.defaultValue !== undefined) value = item.defaultValue;
+      let value = sourceValue(lead, item.id, item.source, parameters);
+      const emptyHandling = emptyValueHandlingFor(item);
+      if (isEmpty(value) && emptyHandling.kind === "replace") value = emptyHandling.value;
       value = mappedValue(value, item.valueMappings);
       const finalValue = formattedValue(value, item.format, item.datePattern);
       resolved.set(item.id, finalValue);
@@ -264,9 +287,11 @@ export function buildTemplateExport(
     const output = template.columns.map((item, index) => {
       const finalValue = resolve(item);
       const value = displayValue(finalValue);
+      if (!value && emptyValueHandlingFor(item).kind === "required") {
+        issues.push({ columnId: item.id, outcome: "block", message: `${item.header || "Unnamed column"} is required for source row ${lead.provenance.rowNumber}.` });
+      }
       for (const rule of rulesFor(item)) {
         let invalid = false;
-        if (rule.kind === "required") invalid = !value;
         if (rule.kind === "requiredWhen") {
           const parent = byId.get(rule.parentColumnId);
           invalid = !parent || (conditionMatches(displayValue(resolve(parent)), rule.operator, rule.values) && !value);
@@ -289,18 +314,64 @@ export function buildTemplateExport(
 }
 
 export function cloneExportTemplate(template: ExportTemplate, overrides: Partial<ExportTemplate> = {}): ExportTemplate {
+  const idMap = new Map(template.columns.map((item) => [item.id, templateColumnId()]));
   return {
     ...template,
     ...overrides,
     builtIn: overrides.builtIn ?? false,
     columns: template.columns.map((item) => ({
       ...item,
-      id: templateColumnId(),
+      id: idMap.get(item.id)!,
       source: { ...item.source },
+      ...(item.validationRules ? { validationRules: item.validationRules.map((rule) => (
+        rule.kind === "requiredWhen" || rule.kind === "dependentAllowedValues"
+          ? { ...rule, parentColumnId: idMap.get(rule.parentColumnId) ?? rule.parentColumnId }
+          : { ...rule }
+      )) } : {}),
       ...(item.valueMappings
         ? { valueMappings: item.valueMappings.map((mapping) => ({ ...mapping })) }
         : {}),
     })),
+  };
+}
+
+/** Deep copy for a normal save/edit operation; preserves column identity and dependencies. */
+export function copyExportTemplate(template: ExportTemplate, overrides: Partial<ExportTemplate> = {}): ExportTemplate {
+  return {
+    ...template,
+    ...overrides,
+    columns: template.columns.map((item) => ({
+      ...item,
+      source: { ...item.source },
+      ...(item.validationRules ? { validationRules: item.validationRules.map((rule) => ({ ...rule })) } : {}),
+      ...(item.valueMappings ? { valueMappings: item.valueMappings.map((mapping) => ({ ...mapping })) } : {}),
+    })),
+  };
+}
+
+/**
+ * Converts v0.3.8 persistence into the v0.3.9 design/runtime boundary.
+ * A legacy fixed value remains usable until this template is next saved, then it
+ * is deliberately removed so reusable templates no longer retain business data.
+ */
+export function normalizeExportTemplate(template: ExportTemplate): ExportTemplate {
+  return {
+    ...template,
+    columns: template.columns.map((column) => {
+      const { required: _required, defaultValue: _defaultValue, ...rest } = column;
+      const source = column.source.kind === "parameter"
+        ? { kind: "fixed" as const }
+        : column.source.kind === "fixed"
+          ? { kind: "fixed" as const }
+          : column.source;
+      const rules = (column.validationRules ?? []).filter((rule) => rule.kind !== "required");
+      return {
+        ...rest,
+        source,
+        ...(source.kind !== "empty" ? { emptyValueHandling: emptyValueHandlingFor(column) } : {}),
+        ...(rules.length ? { validationRules: rules } : {}),
+      };
+    }),
   };
 }
 
@@ -327,18 +398,21 @@ export function createExportTemplateDraft(overrides: Partial<ExportTemplate> = {
         id: templateColumnId(),
         header: "Email",
         source: { kind: "canonical", field: "emailProfessional" },
+        emptyValueHandling: { kind: "leaveBlank" },
         format: "text",
       },
       {
         id: templateColumnId(),
         header: "First name",
         source: { kind: "canonical", field: "firstName" },
+        emptyValueHandling: { kind: "leaveBlank" },
         format: "text",
       },
       {
         id: templateColumnId(),
         header: "Last name",
         source: { kind: "canonical", field: "lastName" },
+        emptyValueHandling: { kind: "leaveBlank" },
         format: "text",
       },
     ],
@@ -346,11 +420,14 @@ export function createExportTemplateDraft(overrides: Partial<ExportTemplate> = {
   };
 }
 
-export function exportParameterColumns(template: ExportTemplate): ExportTemplateColumn[] {
+export function exportRuntimeColumns(template: ExportTemplate): ExportTemplateColumn[] {
   const seen = new Set<string>();
   return template.columns.filter((item) => {
-    if (item.source.kind !== "parameter" || seen.has(item.source.key)) return false;
-    seen.add(item.source.key);
+    if ((item.source.kind !== "parameter" && item.source.kind !== "fixed") || seen.has(item.id)) return false;
+    seen.add(item.id);
     return true;
   });
 }
+
+/** @deprecated use exportRuntimeColumns. */
+export const exportParameterColumns = exportRuntimeColumns;

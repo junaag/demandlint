@@ -196,8 +196,11 @@ function rawValidations(xml: string): RawValidation[] {
     const attributes = match[1] ?? "";
     const body = match[2] ?? "";
     const sqref = attributes.match(/\bsqref="([^"]+)"/)?.[1] ?? body.match(/<(?:\w+:)?sqref>([^<]+)</i)?.[1];
-    const formula = body.match(/<(?:\w+:)?formula1>([\s\S]*?)<\/(?:\w+:)?formula1>/i)?.[1]
+    // Newer Excel writes x14 list validations as x14:formula1/xm:f. Their
+    // nested XML must be unwrapped before a defined name or range can resolve.
+    const formulaMarkup = body.match(/<(?:\w+:)?formula1>([\s\S]*?)<\/(?:\w+:)?formula1>/i)?.[1]
       ?? body.match(/<(?:\w+:)?f>([\s\S]*?)<\/(?:\w+:)?f>/i)?.[1];
+    const formula = formulaMarkup?.replace(/<[^>]+>/g, "").trim();
     const type = attributes.match(/\btype="([^"]+)"/)?.[1];
     if (sqref && formula) result.push(type ? { sqref, formula: formula.trim(), type } : { sqref, formula: formula.trim() });
   }

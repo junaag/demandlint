@@ -111,14 +111,18 @@ export function createExportTemplateDraftFromFileAnalysis(
         : "csv"
     : analysis.sourceType;
 
-  const importedColumns = headers.map((header, index) => ({
-    id: templateColumnId(),
-    header: header.trim() ? header : `Column ${index + 1}`,
-    source: sources[index] ?? { kind: "empty" } as ExportColumnSource,
-    format: "text" as const,
-    ...(sheet.columnValidations?.[index]?.rules.length ? { validationRules: sheet.columnValidations[index].rules } : {}),
-    ...(sheet.columnValidations?.[index]?.warnings?.length ? { sourceValidationWarnings: sheet.columnValidations[index].warnings } : {}),
-  }));
+  const importedColumns = headers.map((header, index) => {
+    const source = sources[index] ?? { kind: "empty" } as ExportColumnSource;
+    return {
+      id: templateColumnId(),
+      header: header.trim() ? header : `Column ${index + 1}`,
+      source,
+      format: "text" as const,
+      ...(source.kind !== "empty" ? { emptyValueHandling: { kind: "leaveBlank" as const } } : {}),
+      ...(sheet.columnValidations?.[index]?.rules.length ? { validationRules: sheet.columnValidations[index].rules } : {}),
+      ...(sheet.columnValidations?.[index]?.warnings?.length ? { sourceValidationWarnings: sheet.columnValidations[index].warnings } : {}),
+    };
+  });
   const columns = importedColumns.map((column) => {
     const validationRules = column.validationRules?.map((rule) => {
       if ((rule.kind === "requiredWhen" || rule.kind === "dependentAllowedValues") && /^__column_\d+$/.test(rule.parentColumnId)) {

@@ -8,7 +8,14 @@ import type {
 } from "./domain";
 import { CANONICAL_FIELD_LABELS, DEFAULT_MAPPING_SYNONYMS } from "./synonyms";
 
-const CANONICAL_FIELDS = Object.keys(CANONICAL_FIELD_LABELS) as CanonicalField[];
+// Keep legacy identifiers readable, but do not offer workflow-specific CRM and
+// campaign concepts as current DemandLint canonical suggestions.
+const CANONICAL_FIELDS: CanonicalField[] = [
+  "firstName", "lastName", "email", "emailProfessional", "emailSecondary", "emailPersonal",
+  "company", "jobTitle", "phone", "phoneMobile", "phoneDirect", "phoneStandard", "country",
+  "stateProvince", "city", "postalCode", "address", "salutation", "jobLevel", "department",
+  "website", "industry", "marketingConsent",
+];
 
 function confidenceRank(confidence: MappingCandidate["confidence"]): number {
   if (confidence === "high") return 3;

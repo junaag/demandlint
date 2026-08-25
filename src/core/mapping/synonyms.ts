@@ -34,7 +34,7 @@ export const CANONICAL_FIELD_LABELS: Record<CanonicalField, string> = {
   utmCampaign: "utm campaign",
   utmContent: "utm content",
   initialResponseDate: "initial response date",
-  marketingConsent: "marketing consent",
+  marketingConsent: "contact opt-in",
   salesFollowUpRequested: "sales follow-up requested",
   contactNotes: "contact notes",
 };
@@ -362,7 +362,7 @@ export const DEFAULT_MAPPING_SYNONYMS: MappingSynonymDictionary = {
   utmCampaign: [],
   utmContent: [],
   initialResponseDate: ["first response date"],
-  marketingConsent: ["consent", "gdpr consent"],
+  marketingConsent: ["marketing consent", "consent", "gdpr consent", "contact opt in"],
   salesFollowUpRequested: ["sales follow up", "sales follow-up"],
   contactNotes: ["notes", "contact note"],
 };

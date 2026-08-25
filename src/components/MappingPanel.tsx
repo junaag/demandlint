@@ -28,21 +28,9 @@ const FIELD_OPTIONS: { value: CanonicalField; label: string }[] = [
   { value: "salutation", label: "Salutation" },
   { value: "jobLevel", label: "Job Level" },
   { value: "department", label: "Department" },
-  { value: "localCompanyName", label: "Local Company Name" },
   { value: "website", label: "Website" },
   { value: "industry", label: "Industry" },
-  { value: "leadSource", label: "Lead Source" },
-  { value: "campaignId", label: "Campaign ID" },
-  { value: "campaignName", label: "Campaign Name" },
-  { value: "campaignMemberStatus", label: "Campaign Member Status" },
-  { value: "utmSource", label: "UTM Source" },
-  { value: "utmMedium", label: "UTM Medium" },
-  { value: "utmCampaign", label: "UTM Campaign" },
-  { value: "utmContent", label: "UTM Content" },
-  { value: "initialResponseDate", label: "Initial Response Date" },
-  { value: "marketingConsent", label: "Marketing Consent" },
-  { value: "salesFollowUpRequested", label: "Sales Follow-up Requested" },
-  { value: "contactNotes", label: "Contact Notes" },
+  { value: "marketingConsent", label: "Contact Opt-in" },
 ];
 
 const FIELD_LABELS = Object.fromEntries(

@@ -6,6 +6,7 @@ class MemoryStorage {
   private values = new Map<string, string>();
   getItem(key: string) { return this.values.get(key) ?? null; }
   setItem(key: string, value: string) { this.values.set(key, value); }
+  raw(key: string) { return this.values.get(key); }
 }
 
 const template: ExportTemplate = {
@@ -28,5 +29,17 @@ describe("local export template repository", () => {
     expect((await repository.getById("one"))?.columns[0]?.validationRules?.[0]).toEqual({ kind: "allowedValues", outcome: "block", values: ["a@example.test"] });
     await repository.delete("one");
     expect(await repository.listForOrganization("org-a")).toEqual([]);
+  });
+
+  it("keeps legacy templates readable and removes legacy runtime values when saved", async () => {
+    const storage = new MemoryStorage();
+    const repository = new LocalExportTemplateRepository(storage);
+    const legacy = { ...template, id: "legacy", columns: [{ id: "campaign", header: "Campaign ID", source: { kind: "fixed" as const, value: "701xx" }, required: true }] };
+    storage.setItem("demandlint.export-templates.v1", JSON.stringify([legacy]));
+    expect((await repository.getById("legacy"))?.columns[0]?.source).toEqual({ kind: "fixed", value: "701xx" });
+    await repository.save(legacy);
+    const stored = storage.raw("demandlint.export-templates.v1") ?? "";
+    expect(stored).not.toContain("701xx");
+    expect((await repository.getById("legacy"))?.columns[0]?.source).toEqual({ kind: "fixed" });
   });
 });
