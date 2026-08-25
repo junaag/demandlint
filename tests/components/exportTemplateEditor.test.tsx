@@ -29,6 +29,18 @@ describe("ExportTemplateEditor", () => {
     expect(html).toContain("Allowed values · 2 values");
     expect(html).not.toContain("Fixed value");
     expect(html).not.toContain("Replace values");
+    expect(html).toContain('class="allowed-value-chips"');
+  });
+
+  it("shows concrete date and date-time examples that match export output", () => {
+    const template = createExportTemplateDraft({ columns: [
+      { id: "date", header: "Date", source: { kind: "fixed" }, format: "date" },
+      { id: "datetime", header: "Timestamp", source: { kind: "fixed" }, format: "datetime" },
+    ] });
+    const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
+    expect(html).toContain("MM/DD/YYYY — 08/26/2026");
+    expect(html).toContain("MM/DD/YY HH:MM — 08/26/26 14:30");
+    expect(html).toContain("ISO 8601 UTC — 2026-08-26T14:30:00Z");
   });
 
   it("keeps empty columns free of contradictory empty-value controls", () => {

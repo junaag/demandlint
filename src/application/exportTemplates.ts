@@ -13,7 +13,15 @@ export type ExportColumnSource =
   | { kind: "empty" };
 
 export type ExportValueFormat = "text" | "date" | "datetime" | "number" | "boolean";
-export type ExportDatePattern = "yyyy-MM-dd" | "yyyy/MM/dd" | "MM/dd/yyyy" | "dd/MM/yyyy" | "iso-datetime";
+export type ExportDatePattern =
+  | "yyyy-MM-dd" | "yyyy/MM/dd" | "MM/dd/yyyy" | "dd/MM/yyyy"
+  | "dd-MM-yyyy" | "MM-dd-yyyy" | "dd.MM.yyyy" | "MM.dd.yyyy" | "yyyyMMdd"
+  | "dd/MM/yy" | "MM/dd/yy"
+  | "yyyy-MM-dd HH:mm" | "yyyy-MM-dd HH:mm:ss" | "yyyy/MM/dd HH:mm"
+  | "dd/MM/yyyy HH:mm" | "dd/MM/yyyy HH:mm:ss" | "MM/dd/yyyy HH:mm" | "MM/dd/yyyy HH:mm:ss"
+  | "dd/MM/yy HH:mm" | "MM/dd/yy HH:mm"
+  | "MM/dd/yyyy hh:mm AM/PM" | "dd/MM/yyyy hh:mm AM/PM"
+  | "iso-datetime";
 
 export interface ExportValueMapping {
   from: string;
@@ -194,9 +202,36 @@ function formatDate(date: Date, pattern: ExportDatePattern): string {
   const year = String(date.getUTCFullYear());
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
-  if (pattern === "yyyy/MM/dd") return `${year}/${month}/${day}`;
-  if (pattern === "MM/dd/yyyy") return `${month}/${day}/${year}`;
-  if (pattern === "dd/MM/yyyy") return `${day}/${month}/${year}`;
+  const shortYear = year.slice(-2);
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+  const twelveHour = date.getUTCHours() % 12 || 12;
+  const amPm = date.getUTCHours() < 12 ? "AM" : "PM";
+  const datePatterns: Partial<Record<ExportDatePattern, string>> = {
+    "yyyy/MM/dd": `${year}/${month}/${day}`,
+    "MM/dd/yyyy": `${month}/${day}/${year}`,
+    "dd/MM/yyyy": `${day}/${month}/${year}`,
+    "dd-MM-yyyy": `${day}-${month}-${year}`,
+    "MM-dd-yyyy": `${month}-${day}-${year}`,
+    "dd.MM.yyyy": `${day}.${month}.${year}`,
+    "MM.dd.yyyy": `${month}.${day}.${year}`,
+    yyyyMMdd: `${year}${month}${day}`,
+    "dd/MM/yy": `${day}/${month}/${shortYear}`,
+    "MM/dd/yy": `${month}/${day}/${shortYear}`,
+    "yyyy-MM-dd HH:mm": `${year}-${month}-${day} ${hours}:${minutes}`,
+    "yyyy-MM-dd HH:mm:ss": `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`,
+    "yyyy/MM/dd HH:mm": `${year}/${month}/${day} ${hours}:${minutes}`,
+    "dd/MM/yyyy HH:mm": `${day}/${month}/${year} ${hours}:${minutes}`,
+    "dd/MM/yyyy HH:mm:ss": `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`,
+    "MM/dd/yyyy HH:mm": `${month}/${day}/${year} ${hours}:${minutes}`,
+    "MM/dd/yyyy HH:mm:ss": `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`,
+    "dd/MM/yy HH:mm": `${day}/${month}/${shortYear} ${hours}:${minutes}`,
+    "MM/dd/yy HH:mm": `${month}/${day}/${shortYear} ${hours}:${minutes}`,
+    "MM/dd/yyyy hh:mm AM/PM": `${month}/${day}/${year} ${String(twelveHour).padStart(2, "0")}:${minutes} ${amPm}`,
+    "dd/MM/yyyy hh:mm AM/PM": `${day}/${month}/${year} ${String(twelveHour).padStart(2, "0")}:${minutes} ${amPm}`,
+  };
+  if (datePatterns[pattern]) return datePatterns[pattern]!;
   if (pattern === "iso-datetime") return date.toISOString().replace(/\.\d{3}Z$/, "Z");
   return `${year}-${month}-${day}`;
 }

@@ -187,11 +187,119 @@ function referenceValues(
   return values;
 }
 
+function referenceMatrix(
+  reference: string,
+  workbook: import("xlsx").WorkBook,
+  currentSheet: string,
+  XLSX: typeof import("xlsx"),
+): string[][] | undefined {
+  const cleaned = decodeEntities(reference).replace(/^=/, "").trim();
+  const parts = cleaned.match(/^(?:'([^']+)'|([^!]+))!\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/i)
+    ?? cleaned.match(/^\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/i);
+  if (!parts) return undefined;
+  const hasSheet = cleaned.includes("!");
+  const sheetName = hasSheet ? (parts[1] ?? parts[2]) : currentSheet;
+  const columnStart = hasSheet ? parts[3] : parts[1];
+  const rowStart = hasSheet ? parts[4] : parts[2];
+  const columnEnd = hasSheet ? (parts[5] ?? columnStart) : (parts[3] ?? columnStart);
+  const rowEnd = hasSheet ? (parts[6] ?? rowStart) : (parts[4] ?? rowStart);
+  const sheet = workbook.Sheets[sheetName!];
+  if (!sheet) return undefined;
+  const range = XLSX.utils.decode_range(`${columnStart}${rowStart}:${columnEnd}${rowEnd}`);
+  const sheetRows = XLSX.utils.sheet_to_json<Array<unknown>>(sheet, { header: 1, raw: true, defval: null, blankrows: true });
+  return Array.from({ length: range.e.r - range.s.r + 1 }, (_, rowOffset) => (
+    Array.from({ length: range.e.c - range.s.c + 1 }, (_, columnOffset) => {
+      const value = sheetRows[range.s.r + rowOffset]?.[range.s.c + columnOffset];
+      return value === undefined || value === null ? "" : String(value);
+    })
+  ));
+}
+
+function normalizedDefinedName(value: string): string {
+  return value.replace(/[^A-Za-z0-9]/g, "").toLocaleLowerCase();
+}
+
+function namedValuesForParent(
+  parentValue: string,
+  names: Map<string, string>,
+  workbook: import("xlsx").WorkBook,
+  sheetName: string,
+  XLSX: typeof import("xlsx"),
+): string[] | undefined {
+  const expected = normalizedDefinedName(parentValue);
+  const name = [...names.keys()].find((candidate) => normalizedDefinedName(candidate) === expected);
+  return name ? referenceValues(names.get(name)!, workbook, sheetName, XLSX) : undefined;
+}
+
+function referencedColumn(formula: string): number | undefined {
+  for (const match of formula.matchAll(/\$?([A-Z]{1,3})\$?\d+/gi)) {
+    if (formula[match.index! - 1] === "!") continue;
+    return [...match[1]!.toUpperCase()].reduce((total, character) => total * 26 + character.charCodeAt(0) - 64, 0) - 1;
+  }
+  return undefined;
+}
+
+function vlookupCases(
+  formula: string,
+  parentValues: readonly string[],
+  names: Map<string, string>,
+  workbook: import("xlsx").WorkBook,
+  sheetName: string,
+  XLSX: typeof import("xlsx"),
+): Record<string, string[]> | undefined {
+  const match = formula.match(/VLOOKUP\s*\(\s*\$?[A-Z]{1,3}\$?\d+\s*,\s*([^,]+)\s*,\s*(\d+)/i);
+  if (!match) return undefined;
+  const rows = referenceMatrix(match[1]!.trim(), workbook, sheetName, XLSX);
+  const valueColumn = Number(match[2]) - 1;
+  if (!rows || valueColumn < 1) return undefined;
+  const lookup = new Map(rows.filter((row) => row[0] && row[valueColumn]).map((row) => [row[0]!, row[valueColumn]!]));
+  const cases: Record<string, string[]> = {};
+  for (const parentValue of parentValues) {
+    const targetName = lookup.get(parentValue);
+    if (!targetName) continue;
+    const values = referenceValues(names.get(targetName) ?? targetName, workbook, sheetName, XLSX);
+    if (values) cases[parentValue] = values;
+  }
+  return Object.keys(cases).length > 0 ? cases : undefined;
+}
+
+function ifCases(
+  formula: string,
+  parentValues: readonly string[],
+  valuesForFormula: (formula: string) => string[] | undefined,
+): Record<string, string[]> | undefined {
+  const match = formula.match(/IF\s*\(\s*OR\s*\(([^)]*)\)\s*,\s*([A-Za-z_][A-Za-z0-9_.]*)\s*,\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\)/i);
+  if (!match) return undefined;
+  const matchedValues = new Set([...match[1]!.matchAll(/=\s*"([^"]*)"/g)].map((item) => item[1]!));
+  const onMatch = valuesForFormula(match[2]!);
+  const otherwise = valuesForFormula(match[3]!);
+  if (!onMatch || !otherwise) return undefined;
+  return Object.fromEntries(parentValues.map((parentValue) => [parentValue, matchedValues.has(parentValue) ? onMatch : otherwise]));
+}
+
+function indirectIfCases(
+  formula: string,
+  parentValues: readonly string[],
+  valuesForFormula: (formula: string) => string[] | undefined,
+): Record<string, string[]> | undefined {
+  const match = formula.match(/INDIRECT\s*\(\s*IF\s*\(\s*\$?[A-Z]{1,3}\$?\d+\s*=\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*\$?[A-Z]{1,3}\$?\d+\s*\)\s*\)/i);
+  if (!match) return undefined;
+  const cases: Record<string, string[]> = {};
+  for (const parentValue of parentValues) {
+    const name = parentValue === match[1] ? match[2]! : parentValue;
+    const values = valuesForFormula(name);
+    if (values) cases[parentValue] = values;
+  }
+  return Object.keys(cases).length > 0 ? cases : undefined;
+}
+
 interface RawValidation { sqref: string; formula: string; type?: string }
 
 function rawValidations(xml: string): RawValidation[] {
   const result: RawValidation[] = [];
-  const validationPattern = /<(?:\w+:)?dataValidation\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?dataValidation>/gi;
+  // Ignore self-closing metadata validations. Treating one as an opening tag
+  // would consume the following real list validation and shift its sqref.
+  const validationPattern = /<(?:\w+:)?dataValidation\b(?![^>]*\/>)\s*([^>]*)>([\s\S]*?)<\/(?:\w+:)?dataValidation>/gi;
   for (const match of xml.matchAll(validationPattern)) {
     const attributes = match[1] ?? "";
     const body = match[2] ?? "";
@@ -228,7 +336,7 @@ function normalizeWorkbookValidations(
         for (const column of columns) target[column] = { rules: [], warnings: ["Source validation needs review; this Excel validation type is not supported."] };
         continue;
       }
-      if (/\bINDIRECT\s*\(/i.test(validation.formula)) {
+      if (/\b(?:INDIRECT|IF|VLOOKUP)\s*\(/i.test(validation.formula) && referencedColumn(validation.formula) !== undefined) {
         pending.push({ columns, formula: validation.formula });
         continue;
       }
@@ -242,18 +350,21 @@ function normalizeWorkbookValidations(
       }
     }
     for (const dependent of pending) {
-      const parentColumn = columnIndexFromReference(dependent.formula);
+      const parentColumn = referencedColumn(dependent.formula);
       if (parentColumn === undefined) {
         for (const column of dependent.columns) target[column] = { rules: [], warnings: ["Source validation needs review; this dependent list could not be resolved."] };
         continue;
       }
       const parentValues = parentAllowed.get(parentColumn) ?? [];
-      const cases: Record<string, string[]> = {};
-      for (const parentValue of parentValues) {
-        const key = parentValue.replace(/[^A-Za-z0-9_]/g, "_");
-        const values = valuesForFormula(`=${key}`, sheetName);
-        if (values) cases[parentValue] = values;
-      }
+      const formulaValues = (formula: string) => valuesForFormula(formula, sheetName)
+        ?? namedValuesForParent(formula, names, workbook, sheetName, XLSX);
+      const cases = indirectIfCases(dependent.formula, parentValues, formulaValues)
+        ?? vlookupCases(dependent.formula, parentValues, names, workbook, sheetName, XLSX)
+        ?? ifCases(dependent.formula, parentValues, formulaValues)
+        ?? Object.fromEntries(parentValues.flatMap((parentValue) => {
+          const values = namedValuesForParent(parentValue, names, workbook, sheetName, XLSX);
+          return values ? [[parentValue, values] as const] : [];
+        }));
       for (const column of dependent.columns) {
         if (Object.keys(cases).length === 0) target[column] = { rules: [], warnings: ["Source validation needs review; this dependent list could not be resolved."] };
         else target[column] = { rules: [{ kind: "dependentAllowedValues", outcome: "block", parentColumnId: `__column_${parentColumn}`, cases }] };

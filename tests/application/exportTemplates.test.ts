@@ -83,6 +83,19 @@ describe("destination export templates", () => {
     expect(output.rows[0]).toEqual({ column_0: "08/21/2026" });
   });
 
+  it("formats common date and date-time patterns exactly as shown in the editor", () => {
+    const formats = [
+      ["MM/dd/yyyy", "08/26/2026"], ["dd/MM/yyyy", "26/08/2026"], ["MM/dd/yy", "08/26/26"],
+      ["yyyy-MM-dd HH:mm", "2026-08-26 14:30"], ["MM/dd/yy HH:mm", "08/26/26 14:30"],
+      ["iso-datetime", "2026-08-26T14:30:00Z"],
+    ] as const;
+    const output = buildTemplateExport({
+      ...template,
+      columns: formats.map(([datePattern], index) => ({ id: String(index), header: datePattern, source: { kind: "custom" as const, key: "timestamp" }, format: datePattern.includes("HH") || datePattern === "iso-datetime" ? "datetime" as const : "date" as const, datePattern })),
+    }, [{ ...lead, customFields: { timestamp: "2026-08-26T14:30:00Z" } }]);
+    expect(Object.values(output.rows[0]!)).toEqual(formats.map(([, value]) => value));
+  });
+
   it("creates independent manual templates while preserving exact column order", () => {
     const manual = createExportTemplateDraft({ name: "My CRM import" });
     const duplicate = cloneExportTemplate(manual, { id: "duplicate", name: "My CRM import copy" });
@@ -136,6 +149,15 @@ describe("destination export templates", () => {
     expect(output.issues).toEqual([]);
     expect(exportRuntimeColumns({ ...template, columns: [fixed] }).map((column) => column.id)).toEqual(["channel"]);
     expect(normalizeExportTemplate({ ...template, columns: [{ ...fixed, source: { kind: "fixed", value: "Event" }, required: true }] }).columns[0]?.source).toEqual({ kind: "fixed" });
+  });
+
+  it("validates dependent fixed fields against the selected runtime parent value", () => {
+    const columns = [
+      { id: "country", header: "Country", source: { kind: "fixed" as const }, validationRules: [{ kind: "allowedValues" as const, outcome: "block" as const, values: ["United States"] }] },
+      { id: "state", header: "State", source: { kind: "fixed" as const }, validationRules: [{ kind: "dependentAllowedValues" as const, outcome: "block" as const, parentColumnId: "country", cases: { "United States": ["California"] } }] },
+    ];
+    expect(buildTemplateExport({ ...template, columns }, [lead], { country: "United States", state: "California" }).issues).toEqual([]);
+    expect(buildTemplateExport({ ...template, columns }, [lead], { country: "United States", state: "Nevada" }).issues.some((issue) => issue.columnId === "state" && issue.outcome === "block")).toBe(true);
   });
 
   it("uses one empty-value policy before final allowed-value validation", () => {

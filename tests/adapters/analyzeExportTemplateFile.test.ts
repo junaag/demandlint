@@ -165,6 +165,42 @@ describe("export template file analyzer", () => {
     expect(target?.columnValidations?.[3]?.rules[0]?.kind).toBe("dependentAllowedValues");
   });
 
+  it("reconstructs named, x14 VLOOKUP, INDIRECT and IF validations from the production workbook structure", async () => {
+    const fields = Array.from({ length: 6 }, () => Array.from({ length: 30 }, () => null as unknown));
+    fields[0]![7] = "Country Validation List";
+    fields[1]![7] = "Australia"; fields[2]![7] = "United States";
+    fields[1]![9] = "New South Wales"; fields[2]![9] = "Victoria";
+    fields[3]![9] = "California"; fields[4]![9] = "New York";
+    fields[1]![10] = "Webinar"; fields[2]![10] = "Live Event - 3rd Party";
+    fields[1]![13] = "Registered"; fields[2]![13] = "Attended";
+    fields[3]![13] = "Member"; fields[4]![13] = "No Show";
+    fields[1]![14] = "Email"; fields[2]![14] = "Event";
+    fields[1]![25] = "Webinar"; fields[1]![26] = "WebinarStatus";
+    fields[2]![25] = "Live Event - 3rd Party"; fields[2]![26] = "EventStatus";
+    fields[1]![29] = "Third Party"; fields[2]![29] = "Email";
+    const analysis = await analyzeExportTemplateFile(workbookWithValidations([
+      { name: "Sheet1", rows: [["Email Address", "Company Name", "First Name", "Last Name", "Country", "State", "SFDC Campaign ID", "Import Channel", "Import Name", "Import Owner", "Member Status", "Channel Source", "Channel"], ...Array.from({ length: 4 }, () => [])], validationXml: `<dataValidations count="6"><dataValidation allowBlank="1" sqref="E3:E4"/><dataValidation allowBlank="1" sqref="F3:F4"/><dataValidation type="list" sqref="E5:E2976"><formula1>Country</formula1></dataValidation><dataValidation type="list" sqref="F5:F2976"><formula1>INDIRECT(IF(E5="United States","United_States",E5))</formula1></dataValidation><dataValidation type="list" sqref="H5:H2976"><formula1>Import_Channel</formula1></dataValidation><dataValidation type="list" sqref="M5:M2976"><formula1>IF(OR(H5="Live Event - 3rd Party",H5="Virtual Event - 3rd Party"),ChanneNon3P,Channel)</formula1></dataValidation></dataValidations><x14:dataValidations xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main"><x14:dataValidation type="list"><x14:formula1><xm:f>INDIRECT(VLOOKUP(H5,Fields!$Z$2:$AA$3,2,0))</xm:f></x14:formula1><xm:sqref>K5:K2976</xm:sqref></x14:dataValidation></x14:dataValidations>` },
+      { name: "Fields", rows: fields },
+    ], {
+      Country: "Fields!$H$2:$H$3",
+      Australia: "Fields!$J$2:$J$3",
+      United_States: "Fields!$J$4:$J$5",
+      Import_Channel: "Fields!$K$2:$K$3",
+      WebinarStatus: "Fields!$N$2:$N$2",
+      EventStatus: "Fields!$N$3:$N$4",
+      Channel: "Fields!$O$2:$O$3",
+      ChanneNon3P: "Fields!$AD$2:$AD$2",
+    }));
+    const target = analysis.sheets[0]!;
+    const draft = createExportTemplateDraftFromFileAnalysis(analysis, { sheetName: "Sheet1", headerRowNumber: 1 });
+    expect(target.columnValidations?.[4]?.rules).toEqual([{ kind: "allowedValues", outcome: "block", values: ["Australia", "United States"] }]);
+    expect(target.columnValidations?.[5]?.rules).toEqual([{ kind: "dependentAllowedValues", outcome: "block", parentColumnId: "__column_4", cases: { Australia: ["New South Wales", "Victoria"], "United States": ["California", "New York"] } }]);
+    expect(target.columnValidations?.[10]?.rules).toEqual([{ kind: "dependentAllowedValues", outcome: "block", parentColumnId: "__column_7", cases: { Webinar: ["Registered"], "Live Event - 3rd Party": ["Attended", "Member"] } }]);
+    expect(target.columnValidations?.[12]?.rules).toEqual([{ kind: "dependentAllowedValues", outcome: "block", parentColumnId: "__column_7", cases: { Webinar: ["Email", "Event"], "Live Event - 3rd Party": ["Third Party"] } }]);
+    expect(draft.columns[4]?.source).toEqual({ kind: "canonical", field: "country" });
+    expect(draft.columns[5]?.validationRules?.[0]).toMatchObject({ parentColumnId: draft.columns[4]?.id });
+  });
+
   it("surfaces unsupported structured validations instead of dropping them", async () => {
     const analysis = await analyzeExportTemplateFile(workbookWithValidations([
       { name: "Target", rows: [["Email"], [""]], validationXml: "<dataValidations count=\"1\"><dataValidation type=\"whole\" sqref=\"A2:A100\"><formula1>1</formula1></dataValidation></dataValidations>" },
