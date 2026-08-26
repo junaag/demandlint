@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { createExportTemplateDraft } from "../../src/application/exportTemplates";
-import { ExportTemplateEditor } from "../../src/components/ExportTemplateEditor";
+import type { ExportTemplateColumn } from "../../src/application/exportTemplates";
+import { editValueMappingInput, ExportTemplateEditor } from "../../src/components/ExportTemplateEditor";
 
 describe("ExportTemplateEditor", () => {
   it("uses the generic column-source terminology and one empty-value policy", () => {
@@ -65,5 +66,24 @@ describe("ExportTemplateEditor", () => {
     const html = renderToStaticMarkup(<ExportTemplateEditor template={template} onChange={() => undefined} />);
     expect(html).not.toContain("Empty value handling");
     expect(html).toMatch(/class="column-order"><strong>1<\/strong><button[^>]*>↑<\/button><button[^>]*>↓<\/button><\/div>/);
+  });
+
+  it("preserves progressive replace-values input until it can update mappings", () => {
+    let column: ExportTemplateColumn = { id: "department", header: "Department", source: { kind: "canonical", field: "department" } };
+    let visibleText = "";
+    for (const text of ["Information", "Information=", "Information Technology=IT; Financial Services=Finance"]) {
+      const edit = editValueMappingInput(column, text);
+      visibleText = edit.text;
+      column = edit.column;
+      expect(visibleText).toBe(text);
+    }
+    expect(column.valueMappings).toEqual([
+      { from: "Information Technology", to: "IT" },
+      { from: "Financial Services", to: "Finance" },
+    ]);
+
+    const cleared = editValueMappingInput(column, "");
+    expect(cleared.text).toBe("");
+    expect(cleared.column.valueMappings).toBeUndefined();
   });
 });

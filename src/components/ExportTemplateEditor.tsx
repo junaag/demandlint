@@ -18,6 +18,13 @@ function parseMappings(value: string): Array<{ from: string; to: string }> | und
 }
 
 function mappingText(column: ExportTemplateColumn): string { return column.valueMappings?.map((item) => `${item.from}=${item.to}`).join("; ") ?? ""; }
+export function editValueMappingInput(column: ExportTemplateColumn, text: string): { text: string; column: ExportTemplateColumn } {
+  const valueMappings = parseMappings(text);
+  if (valueMappings) return { text, column: { ...column, valueMappings } };
+  if (text) return { text, column };
+  const { valueMappings: _mappings, ...withoutMappings } = column;
+  return { text, column: withoutMappings };
+}
 function directAllowedValues(column: ExportTemplateColumn): string[] | undefined { return column.validationRules?.find((rule): rule is Extract<ExportValidationRule, { kind: "allowedValues" }> => rule.kind === "allowedValues")?.values; }
 function dependentAllowedValues(column: ExportTemplateColumn): Extract<ExportValidationRule, { kind: "dependentAllowedValues" }> | undefined { return column.validationRules?.find((rule): rule is Extract<ExportValidationRule, { kind: "dependentAllowedValues" }> => rule.kind === "dependentAllowedValues"); }
 
@@ -46,7 +53,14 @@ interface ExportTemplateEditorProps { template: ExportTemplate; onChange: (templ
 
 export function ExportTemplateEditor({ template, onChange, heading = "Template configuration" }: ExportTemplateEditorProps) {
   const [customFieldInputIds, setCustomFieldInputIds] = useState<Set<string>>(() => new Set());
+  const [valueMappingTexts, setValueMappingTexts] = useState<Record<string, string>>({});
+  const valueMappingTextKey = (column: ExportTemplateColumn) => `${template.id}:${column.id}`;
+  const valueMappingText = (column: ExportTemplateColumn) => valueMappingTexts[valueMappingTextKey(column)] ?? mappingText(column);
   function setCustomFieldInputVisibility(id: string, visible: boolean) { setCustomFieldInputIds((current) => { const next = new Set(current); if (visible) next.add(id); else next.delete(id); return next; }); }
+  function changeValueMappings(column: ExportTemplateColumn, text: string) {
+    setValueMappingTexts((current) => ({ ...current, [valueMappingTextKey(column)]: text }));
+    updateColumn(column.id, (current) => editValueMappingInput(current, text).column);
+  }
   function updateColumn(id: string, update: (column: ExportTemplateColumn) => ExportTemplateColumn) { onChange({ ...template, columns: template.columns.map((column) => column.id === id ? update(column) : column) }); }
   function changeSource(column: ExportTemplateColumn, kind: "mapped" | "fixed" | "empty") {
     const source: ExportColumnSource = kind === "mapped" ? { kind: "custom", key: "" } : kind === "fixed" ? { kind: "fixed" } : { kind: "empty" };
@@ -73,7 +87,7 @@ export function ExportTemplateEditor({ template, onChange, heading = "Template c
         {column.source.kind !== "empty" && <><label><span>Value type</span><select value={column.format ?? "text"} onChange={(event) => update((current) => ({ ...current, format: event.target.value as ExportValueFormat }))}><option value="text">Text / identifier</option><option value="number">Number</option><option value="date">Date</option><option value="datetime">Date & time</option><option value="boolean">Yes / No</option></select></label><DateFormatField column={column} updateColumn={update} /></>}
         {(allowed || dependent) && <details className="optional-rules allowed-values-reference"><summary>Allowed values · {allowed ? `${allowed.length} values` : `Depends on ${template.columns.find((item) => item.id === dependent!.parentColumnId)?.header ?? "another field"} · ${Object.keys(dependent!.cases).length} cases`}</summary><p>{dependent ? "Reference information only; each group is keyed by its parent value." : "Reference information only; choose fixed values when this template is used."}</p>{allowed ? <div className="allowed-value-chips">{allowed.map((value) => <span key={value}>{value}</span>)}</div> : <div className="dependent-allowed-groups">{Object.entries(dependent!.cases).map(([parent, values]) => <section key={parent}><strong>{parent}</strong><div className="allowed-value-chips">{values.map((value) => <span key={value}>{value}</span>)}</div></section>)}</div>}</details>}
         {column.source.kind !== "empty" && <fieldset className="empty-value-handling"><legend>Empty value handling</legend><label><input type="radio" checked={handling.kind === "required"} onChange={() => setEmptyHandling(column.id, "required")} />Value required</label><label><input type="radio" checked={handling.kind === "replace"} onChange={() => setEmptyHandling(column.id, "replace")} />Replace empty value with…</label>{handling.kind === "replace" && (allowed ? <select value={handling.value} onChange={(event) => update((current) => ({ ...current, emptyValueHandling: { kind: "replace", value: event.target.value } }))}><option value="">Select a value</option>{allowed.map((value) => <option key={value} value={value}>{value}</option>)}</select> : <input value={handling.value} onChange={(event) => update((current) => ({ ...current, emptyValueHandling: { kind: "replace", value: event.target.value } }))} />)}<label><input type="radio" checked={handling.kind === "leaveBlank"} onChange={() => setEmptyHandling(column.id, "leaveBlank")} />If value is empty, leave blank</label></fieldset>}
-        {isMapped && <details className="optional-rules"><summary>Replace values</summary><label className="value-map-field"><small>Optionally normalize source values before final validation.</small><input placeholder="Information Technology=IT" value={mappingText(column)} onChange={(event) => update((current) => { const valueMappings = parseMappings(event.target.value); if (valueMappings) return { ...current, valueMappings }; const { valueMappings: _mappings, ...withoutMappings } = current; return withoutMappings; })} /></label></details>}
+        {isMapped && <details className="optional-rules"><summary>Replace values</summary><label className="value-map-field"><small>Optionally normalize source values before final validation.</small><input placeholder="Information Technology=IT" value={valueMappingText(column)} onChange={(event) => changeValueMappings(column, event.target.value)} /></label></details>}
         {column.sourceValidationWarnings?.length && <p className="validation-warning">{column.sourceValidationWarnings.join(" ")}</p>}
       </div></article>;
     })}

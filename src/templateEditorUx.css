@@ -59,8 +59,9 @@
 .export-column-fields > label > span { grid-row: 1; }
 .export-column-fields > label > small { grid-row: 2; padding-top: 3px; }
 .export-column-fields > label > input, .export-column-fields > label > select { grid-row: 3; }
+.source-field-selection { grid-template-rows: min-content minmax(3.15rem, auto) min-content; }
 .source-field-selection .source-field-control { grid-row: 3; display: grid; gap: 6px; }
-.source-field-selection .source-field-control > select, .source-field-selection .source-field-control > input { min-width: 0; }
+.source-field-selection .source-field-control > select, .source-field-selection .source-field-control > input { width: 100%; min-width: 0; }
 .optional-rules { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 2px -14px 0; padding: 12px 14px 0; border-top: 1px solid #e8ebf0; }
 .optional-rules summary { grid-column: 1 / -1; cursor: pointer; color: #46536b; font-size: .84rem; font-weight: 650; list-style: none; }
 .optional-rules summary::-webkit-details-marker { display: none; }
