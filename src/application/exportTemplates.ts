@@ -458,10 +458,24 @@ export function createExportTemplateDraft(overrides: Partial<ExportTemplate> = {
 export function exportRuntimeColumns(template: ExportTemplate): ExportTemplateColumn[] {
   const seen = new Set<string>();
   return template.columns.filter((item) => {
-    if ((item.source.kind !== "parameter" && item.source.kind !== "fixed") || seen.has(item.id)) return false;
-    seen.add(item.id);
+    // A legacy fixed source may still carry a template value. It is already
+    // resolved and must not be presented as a value to enter for this export.
+    if ((item.source.kind !== "parameter" && (item.source.kind !== "fixed" || item.source.value !== undefined))) return false;
+    const key = exportRuntimeValueKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
+}
+
+/** The persisted runtime key used by the export builder for this column. */
+export function exportRuntimeValueKey(column: ExportTemplateColumn): string {
+  return column.source.kind === "parameter" ? column.source.key : column.id;
+}
+
+/** A stable, type-qualified identity used when carrying values between templates. */
+export function exportRuntimeValueIdentity(column: ExportTemplateColumn): string {
+  return `${column.source.kind}:${exportRuntimeValueKey(column)}`;
 }
 
 /** @deprecated use exportRuntimeColumns. */

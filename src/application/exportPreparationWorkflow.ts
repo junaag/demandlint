@@ -1,7 +1,11 @@
 import type { DataExportFormat } from "./exportFileName";
 import {
   cloneExportTemplate,
+  copyExportTemplate,
   createExportTemplateDraft,
+  exportRuntimeColumns,
+  exportRuntimeValueIdentity,
+  exportRuntimeValueKey,
   type ExportParameterValues,
   type ExportTemplate,
 } from "./exportTemplates";
@@ -54,9 +58,35 @@ export function selectExportTemplate(
   state: ExportPreparationState,
   template: ExportTemplate,
 ): ExportPreparationState {
-  const draft = cloneExportTemplate(template, { id: template.id, builtIn: false });
+  // Preserve saved column ids: they are the stable field identity for runtime
+  // values and validation dependencies. The draft still has its own objects.
+  const draft = copyExportTemplate(template, { id: template.id, builtIn: false });
   return {
     ...state,
-    template: { draft, format: draft.defaultFormat, parameters: {} },
+    template: {
+      draft,
+      format: draft.defaultFormat,
+      parameters: preserveCompatibleRuntimeValues(state.template.draft, state.template.parameters, draft),
+    },
   };
+}
+
+export function restoreRuntimeValues(template: ExportTemplate, values: ExportParameterValues): ExportParameterValues {
+  const allowed = new Set(exportRuntimeColumns(template).map(exportRuntimeValueKey));
+  return Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)));
+}
+
+export function preserveCompatibleRuntimeValues(
+  previousTemplate: ExportTemplate,
+  previousValues: ExportParameterValues,
+  nextTemplate: ExportTemplate,
+): ExportParameterValues {
+  const previous = new Map(exportRuntimeColumns(previousTemplate).map((column) => [
+    exportRuntimeValueIdentity(column), exportRuntimeValueKey(column),
+  ]));
+  return Object.fromEntries(exportRuntimeColumns(nextTemplate).flatMap((column) => {
+    const previousKey = previous.get(exportRuntimeValueIdentity(column));
+    const value = previousKey === undefined ? undefined : previousValues[previousKey];
+    return value === undefined ? [] : [[exportRuntimeValueKey(column), value]];
+  }));
 }

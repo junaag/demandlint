@@ -75,6 +75,8 @@ export {
   exportTemplateId,
   exportParameterColumns,
   exportRuntimeColumns,
+  exportRuntimeValueIdentity,
+  exportRuntimeValueKey,
   emptyValueHandlingFor,
   normalizeExportTemplate,
   templateColumnId,

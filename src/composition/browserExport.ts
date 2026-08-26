@@ -96,7 +96,7 @@ export async function downloadTemplateExport(
   format: DataExportFormat,
 ): Promise<void> {
   const output = buildTemplateExport(template, result.ready, parameters);
-  if (output.issues.length > 0) {
+  if (output.issues.some((issue) => issue.outcome !== "review")) {
     throw new Error(output.issues[0]?.message ?? "The export template is not valid.");
   }
   const fileName = buildExportFileName("clean", format);

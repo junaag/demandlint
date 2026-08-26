@@ -5,6 +5,7 @@ import {
   cloneExportTemplate,
   createExportTemplateDraft,
   exportRuntimeColumns,
+  exportRuntimeValueKey,
   normalizeExportTemplate,
   type ExportTemplate,
 } from "../../src/application/exportTemplates";
@@ -149,6 +150,15 @@ describe("destination export templates", () => {
     expect(output.issues).toEqual([]);
     expect(exportRuntimeColumns({ ...template, columns: [fixed] }).map((column) => column.id)).toEqual(["channel"]);
     expect(normalizeExportTemplate({ ...template, columns: [{ ...fixed, source: { kind: "fixed", value: "Event" }, required: true }] }).columns[0]?.source).toEqual({ kind: "fixed" });
+  });
+
+  it("does not prompt for a fixed template value or for mapped output fields", () => {
+    const columns = [
+      { id: "fixed", header: "Fixed", source: { kind: "fixed" as const, value: "Always" } },
+      { id: "mapped", header: "Email", source: { kind: "canonical" as const, field: "email" as const } },
+      { id: "runtime", header: "Campaign", source: { kind: "fixed" as const } },
+    ];
+    expect(exportRuntimeColumns({ ...template, columns }).map(exportRuntimeValueKey)).toEqual(["runtime"]);
   });
 
   it("validates dependent fixed fields against the selected runtime parent value", () => {

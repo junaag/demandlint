@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createExportPreparationState,
+  preserveCompatibleRuntimeValues,
+  restoreRuntimeValues,
   selectExportPreparationMode,
   selectExportTemplate,
 } from "../../src/application/exportPreparationWorkflow";
@@ -57,5 +59,27 @@ describe("prepare export workflow", () => {
     expect(selected.template.draft.id).toBe("saved");
     expect(saved.columns[0]!.header).toBe("Email");
     expect(selected.template.parameters).toEqual({});
+  });
+
+  it("preserves only runtime values with a safe matching field identity when changing templates", () => {
+    const previous = createExportTemplateDraft({ columns: [
+      { id: "campaign", header: "Campaign", source: { kind: "fixed" } },
+      { id: "channel", header: "Channel", source: { kind: "parameter", key: "channel", label: "Channel" } },
+    ] });
+    const next = createExportTemplateDraft({ columns: [
+      { id: "campaign", header: "Campaign ID", source: { kind: "fixed" } },
+      { id: "different", header: "Region", source: { kind: "fixed" } },
+      { id: "new-channel", header: "Channel", source: { kind: "parameter", key: "channel", label: "Channel" } },
+    ] });
+
+    expect(preserveCompatibleRuntimeValues(previous, { campaign: "701xx", channel: "Event" }, next)).toEqual({ campaign: "701xx", channel: "Event" });
+  });
+
+  it("restores only values that still belong to a template runtime field", () => {
+    const template = createExportTemplateDraft({ columns: [
+      { id: "import-name", header: "Import name", source: { kind: "fixed" } },
+      { id: "mapped", header: "Email", source: { kind: "canonical", field: "email" } },
+    ] });
+    expect(restoreRuntimeValues(template, { "import-name": "August import", mapped: "do not keep" })).toEqual({ "import-name": "August import" });
   });
 });
