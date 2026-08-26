@@ -6,7 +6,7 @@ import {
 } from "../application/public";
 import type { DataExportFormat } from "../application/exportFileName";
 import { downloadTemplateExport } from "../composition/browserExport";
-import { localExportRuntimeValueRepository } from "../adapters/browser/localExportRuntimeValueRepository";
+import { loadBrowserExportRuntimeValues, saveBrowserExportRuntimeValues } from "../composition/browserExportRuntimeValues";
 import {
   createExportPreparationState, restoreRuntimeValues, selectExportPreparationMode,
   selectExportTemplate, type ExportPreparationMode,
@@ -55,7 +55,7 @@ export function ExportPreparation({ result, templates, organizationId, onSave }:
   const readyToExport = requiredRemaining === 0 && blockingIssues.length === 0 && result.ready.length > 0;
   const filteredStructure = draft.columns.filter((column) => structureFilter === "all" || structureStatus(column).filter === structureFilter);
 
-  useEffect(() => { if (templateSelected) localExportRuntimeValueRepository.save(draft.id, parameters); }, [draft.id, parameters, templateSelected]);
+  useEffect(() => { if (templateSelected) saveBrowserExportRuntimeValues(draft.id, parameters); }, [draft.id, parameters, templateSelected]);
 
   function changeMode(mode: ExportPreparationMode) { setWorkflow((current) => selectExportPreparationMode(current, mode)); setMessage(null); }
   function setDraft(update: SetStateAction<ExportTemplate>) { setWorkflow((current) => { const currentDraft = current[current.mode].draft; const next = typeof update === "function" ? update(currentDraft) : update; return { ...current, [current.mode]: { ...current[current.mode], draft: next, format: next.defaultFormat } }; }); }
@@ -66,7 +66,7 @@ export function ExportPreparation({ result, templates, organizationId, onSave }:
     const selected = templates.find((template) => template.id === id);
     if (!selected) return;
     const selectedState = selectExportTemplate(workflow, selected);
-    const restored = restoreRuntimeValues(selectedState.template.draft, localExportRuntimeValueRepository.read(selected.id));
+    const restored = restoreRuntimeValues(selectedState.template.draft, loadBrowserExportRuntimeValues(selected.id));
     const preserved = selectedState.template.parameters;
     const nextParameters = { ...restored, ...preserved };
     const preservedCount = Object.keys(preserved).filter((key) => preserved[key]?.trim()).length;
