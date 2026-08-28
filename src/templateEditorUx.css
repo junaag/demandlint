@@ -98,7 +98,7 @@
 .workbook-coordinate-grid { display: grid; grid-template-columns: 1.2fr 1fr .7fr; gap: 12px; }
 .workbook-coordinate-grid label { display: grid; gap: 6px; color: #46536b; font-size: .82rem; font-weight: 650; }
 .export-method-choice { display: grid; gap: 10px; margin-top: 18px; }
-.export-method-choice > .export-mode-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.export-method-choice > .export-mode-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0; }
 .export-method-choice .mode-choice { display: grid; gap: 5px; min-height: 88px; padding: 14px; border: 1px solid #dfe4ec; border-radius: 11px; background: #fff; color: #46536b; text-align: left; cursor: pointer; }
 .export-method-choice .mode-choice.active { border-color: #8195e8; background: #f3f5ff; box-shadow: 0 0 0 1px #8195e8 inset; }
 .export-method-choice .mode-choice span { color: #718096; font-size: .78rem; line-height: 1.45; }

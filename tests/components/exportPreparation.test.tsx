@@ -34,6 +34,7 @@ describe("ExportPreparation", () => {
       storedFileType: "xlsx", targetSheet: "Import", headerRow: 2, firstDataRow: 3,
     } });
     const html = renderToStaticMarkup(<ExportMethodChoice template={template} method="generate" onChange={() => undefined} />);
+    expect(html).toContain("2. EXPORT METHOD");
     expect(html).toContain("Generate new file");
     expect(html).toContain("Fill template workbook");
     expect(html).toContain("Marketo_bulk_import.xlsx");
