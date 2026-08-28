@@ -1,6 +1,8 @@
 import { downloadTextFile } from "../adapters/browser/downloadTextFile";
 import { downloadXlsxFile } from "../adapters/browser/downloadXlsxFile";
 import { downloadXlsFile } from "../adapters/browser/downloadXlsFile";
+import { downloadBinaryFile } from "../adapters/browser/downloadBinaryFile";
+import { fillTemplateWorkbookBytes } from "../adapters/export/fillTemplateWorkbook";
 import { serializeDelimited, type CsvColumn } from "../adapters/export/serializeCsv";
 import {
   buildExportFileName,
@@ -19,6 +21,7 @@ import {
   type ExportParameterValues,
   type ExportTemplate,
 } from "../application/exportTemplates";
+import { downloadBrowserExportTemplateWorkbook } from "./browserExportTemplates";
 
 const TYPED_CONTACT_FIELDS = new Set([
   "emailProfessional",
@@ -107,5 +110,20 @@ export async function downloadTemplateExport(
     output.rows,
     format,
     template.delimiter ?? ",",
+  );
+}
+
+export async function downloadFilledTemplateWorkbook(
+  result: ProcessedDataset,
+  template: ExportTemplate,
+  parameters: ExportParameterValues,
+): Promise<void> {
+  if (!template.workbook) throw new Error("This export template does not have a stored workbook.");
+  const masterBytes = await downloadBrowserExportTemplateWorkbook(template);
+  const output = await fillTemplateWorkbookBytes(masterBytes, template, result.ready, parameters);
+  downloadBinaryFile(
+    buildExportFileName("clean", "xlsx"),
+    output,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   );
 }

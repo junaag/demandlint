@@ -7,7 +7,7 @@ interface ExportTemplateRow {
   organization_id: string;
   name: string;
   destination_type: string | null;
-  config: Pick<ExportTemplate, "columns" | "defaultFormat" | "delimiter" | "sheetName">;
+  config: Pick<ExportTemplate, "columns" | "defaultFormat" | "delimiter" | "sheetName" | "workbook">;
 }
 
 export function destinationTypeFromStorage(destinationType: string | null): string {
@@ -29,6 +29,7 @@ function fromRow(row: ExportTemplateRow): ExportTemplate {
     defaultFormat: row.config.defaultFormat,
     ...(row.config.delimiter ? { delimiter: row.config.delimiter } : {}),
     ...(row.config.sheetName ? { sheetName: row.config.sheetName } : {}),
+    ...(row.config.workbook ? { workbook: { ...row.config.workbook } } : {}),
   };
 }
 
@@ -61,6 +62,7 @@ export class SupabaseExportTemplateRepository implements ExportTemplateRepositor
       defaultFormat: normalized.defaultFormat,
       delimiter: normalized.delimiter,
       sheetName: normalized.sheetName,
+      workbook: normalized.workbook,
     };
     const { error } = await getSupabaseClient().from("export_templates").upsert({
       id: normalized.id,

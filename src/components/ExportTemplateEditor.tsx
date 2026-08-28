@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ExportTemplate, ExportTemplateColumn, ExportColumnSource, ExportDatePattern, ExportValueFormat, ExportValidationRule, EmptyValueHandling } from "../application/exportTemplates";
 import { CANONICAL_FIELD_OPTIONS, emptyValueHandlingFor, templateColumnId } from "../application/exportTemplates";
 import type { CanonicalField } from "../application/public";
@@ -49,9 +49,9 @@ function DateFormatField({ column, updateColumn }: { column: ExportTemplateColum
   </select></label>;
 }
 
-interface ExportTemplateEditorProps { template: ExportTemplate; onChange: (template: ExportTemplate) => void; heading?: string; }
+interface ExportTemplateEditorProps { template: ExportTemplate; onChange: (template: ExportTemplate) => void; heading?: string; workbookSection?: ReactNode; }
 
-export function ExportTemplateEditor({ template, onChange, heading = "Template configuration" }: ExportTemplateEditorProps) {
+export function ExportTemplateEditor({ template, onChange, heading = "Template configuration", workbookSection }: ExportTemplateEditorProps) {
   const [customFieldInputIds, setCustomFieldInputIds] = useState<Set<string>>(() => new Set());
   const [valueMappingTexts, setValueMappingTexts] = useState<Record<string, string>>({});
   const valueMappingTextKey = (column: ExportTemplateColumn) => `${template.id}:${column.id}`;
@@ -72,7 +72,7 @@ export function ExportTemplateEditor({ template, onChange, heading = "Template c
   }
   function moveColumn(index: number, direction: -1 | 1) { const target = index + direction; if (target < 0 || target >= template.columns.length) return; const columns = [...template.columns]; [columns[index], columns[target]] = [columns[target]!, columns[index]!]; onChange({ ...template, columns }); }
   function setEmptyHandling(id: string, kind: EmptyValueHandling["kind"]) { updateColumn(id, (current) => { const existing = emptyValueHandlingFor(current); return { ...current, emptyValueHandling: kind === "replace" ? { kind, value: existing.kind === "replace" ? existing.value : "" } : { kind } }; }); }
-  return <div className="export-template-editor"><div className="export-template-meta">
+  return <div className="export-template-editor">{workbookSection}<div className="export-template-meta">
     <label><span>Template name</span><input value={template.name} onChange={(event) => onChange({ ...template, name: event.target.value })} /></label>
     <label><span>Destination / system (optional)</span><small>E.g. CRM, event platform or internal process.</small><input value={template.destinationType} onChange={(event) => onChange({ ...template, destinationType: event.target.value })} /></label>
     <label><span>Default output format</span><select value={template.defaultFormat} onChange={(event) => onChange({ ...template, defaultFormat: event.target.value as DataExportFormat })}>{FORMAT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>

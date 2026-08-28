@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:preprod": "vite build --mode preprod",
     "preview": "vite preview",
+    "preprod:infra": "supabase start --exclude realtime,imgproxy,studio,mailpit,postgres-meta,edge-runtime,logflare,vector,supavisor",
+    "preprod": "npm run preprod:infra && npm run build:preprod && vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "preprod:reset": "npm run preprod:infra && supabase db reset --local",
+    "preprod:test": "npm run preprod:reset && npm run typecheck && vitest run tests/application/runtimeEnvironment.test.ts tests/adapters/localPreprodAuthProvider.test.ts tests/components/environmentIndicator.test.tsx tests/architecture/localPreprod.test.ts tests/architecture/supabaseBackend.test.ts && npm run build:preprod && node scripts/preprod-smoke.mjs",
+    "preprod:stop": "supabase stop --project-id demandlint-preprod-local",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -14,6 +20,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
+    "exceljs": "4.4.0",
     "papaparse": "^5.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -26,6 +33,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "supabase": "2.116.0",
     "typescript": "^5.9.2",
     "vite": "^6.1.0",
     "vitest": "^3.2.4"

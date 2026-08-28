@@ -46,6 +46,38 @@ Column recognition currently includes common EN / FR / ES / PT lead-export heade
 - GitHub Pages deployment
 - Supabase Auth + Postgres control plane with Row Level Security
 
+## Local pre-production
+
+Local pre-production runs a production Vite build at `http://127.0.0.1:4173` against an isolated
+Supabase CLI stack (Postgres, Auth, API and Storage). Docker Desktop or another Docker-compatible
+runtime must be running first.
+
+```bash
+npm run preprod        # start local Supabase, build, and serve the production-like app
+npm run preprod:reset  # rebuild the local database from migrations + deterministic seed
+npm run preprod:test   # reset, run focused checks, build, and smoke-test Auth/RLS/seed data
+npm run preprod:stop   # stop only the DemandLint local Supabase project
+```
+
+The synthetic owner is `test@demandlint.local` in **DemandLint Test Workspace**. The app signs this
+identity in automatically only when the build mode, app environment, browser hostname and Supabase
+URL all satisfy the local safety guard. A `LOCAL PRE-PROD` badge confirms the active mode.
+
+The intended release flow is:
+
+```text
+implement release
+→ run local pre-prod
+→ manual validation
+→ automated checks
+→ merge/publish exact validated commit
+→ production
+```
+
+Local pre-production must never connect to production Supabase. Do not place a hosted Supabase URL
+or production key in `.env.preprod.local`; an unsafe bypass configuration fails the build or stops
+application startup. `preprod:reset` always passes `--local` and never targets a linked project.
+
 ## Architecture direction
 
 V0.1.1 prepares DemandLint for future SaaS capabilities without coupling them to the cleaning engine:

@@ -56,6 +56,8 @@ export type {
   ExportParameterValues,
   ExportTemplate,
   ExportTemplateColumn,
+  ExportTemplateWorkbook,
+  ExportTemplateWorkbookSourceType,
   ExportValidationIssue,
   ExportValueFormat,
   ExportValueMapping,
@@ -64,6 +66,11 @@ export type {
   ExportRequiredWhenOperator,
   ExportSimpleValidationKind,
 } from "./exportTemplates";
+export type {
+  ExportTemplateWorkbookAttachmentInput,
+  ExportTemplateWorkbookChange,
+} from "./exportTemplateWorkbook";
+export { assertWorkbookCoordinates, workbookHeaderCompatibility } from "./exportTemplateWorkbook";
 export {
   CANONICAL_FIELD_LABELS,
   CANONICAL_FIELD_OPTIONS,

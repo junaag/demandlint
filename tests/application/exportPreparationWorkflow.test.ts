@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  availableExportMethods,
   createExportPreparationState,
   preserveCompatibleRuntimeValues,
   restoreRuntimeValues,
@@ -9,6 +10,16 @@ import {
 import { createExportTemplateDraft } from "../../src/application/exportTemplates";
 
 describe("prepare export workflow", () => {
+  it("offers workbook filling only when a stored workbook is attached", () => {
+    const plain = createExportTemplateDraft();
+    const attached = createExportTemplateDraft({ workbook: {
+      storagePath: "org/template/master.xlsx", originalFileName: "master.xlsx", originalFileType: "xlsx",
+      storedFileType: "xlsx", targetSheet: "Import", headerRow: 1, firstDataRow: 2,
+    } });
+    expect(availableExportMethods(plain)).toEqual(["generate"]);
+    expect(availableExportMethods(attached)).toEqual(["generate", "fill-workbook"]);
+  });
+
   it("enters the custom path with an independent editable draft", () => {
     const state = createExportPreparationState(createExportTemplateDraft());
 

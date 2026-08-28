@@ -3,26 +3,29 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const migrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000001_hosted_accounts.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000001_hosted_accounts.sql", import.meta.url),
 );
 const clientPath = fileURLToPath(new URL("../../src/adapters/supabase/client.ts", import.meta.url));
 const memberManagementMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000002_member_management.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000002_member_management.sql", import.meta.url),
 );
 const invitationFunctionPath = fileURLToPath(
   new URL("../../supabase/functions/organization-invitations/index.ts", import.meta.url),
 );
 const roleManagementMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000003_workspace_role_management.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000003_workspace_role_management.sql", import.meta.url),
 );
 const accountDeletionPermissionMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000004_account_deletion_permissions.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000004_account_deletion_permissions.sql", import.meta.url),
 );
 const exportTemplatesMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260821_000005_export_templates.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260821000005_export_templates.sql", import.meta.url),
 );
 const optionalDestinationMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260824_000006_export_templates_optional_destination.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260824000006_export_templates_optional_destination.sql", import.meta.url),
+);
+const workbookStorageMigrationPath = fileURLToPath(
+  new URL("../../supabase/migrations/20260827151359_export_template_workbooks.sql", import.meta.url),
 );
 
 describe("Supabase hosted account boundary", () => {
@@ -112,5 +115,17 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain("alter column destination_type drop not null");
     expect(migration).toContain("destination_type is null");
     expect(migration).toContain("char_length(trim(destination_type)) between 1 and 120");
+  });
+
+  it("keeps template workbooks private and isolates every storage operation by workspace", () => {
+    const migration = readFileSync(workbookStorageMigrationPath, "utf8");
+    expect(migration).toContain("'export-template-workbooks'");
+    expect(migration).toContain("false,");
+    expect(migration).toContain("on storage.objects for select to authenticated");
+    expect(migration).toContain("on storage.objects for insert to authenticated");
+    expect(migration).toContain("on storage.objects for update to authenticated");
+    expect(migration).toContain("on storage.objects for delete to authenticated");
+    expect(migration.match(/private\.is_organization_member/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(migration).not.toMatch(/public\s*=\s*true/i);
   });
 });

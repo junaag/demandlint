@@ -11,6 +11,11 @@ import {
 } from "./exportTemplates";
 
 export type ExportPreparationMode = "custom" | "template";
+export type ExportMethod = "generate" | "fill-workbook";
+
+export function availableExportMethods(template: ExportTemplate): ExportMethod[] {
+  return template.workbook ? ["generate", "fill-workbook"] : ["generate"];
+}
 
 export interface ExportPreparationDraft {
   draft: ExportTemplate;
