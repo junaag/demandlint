@@ -24,6 +24,9 @@ const exportTemplatesMigrationPath = fileURLToPath(
 const optionalDestinationMigrationPath = fileURLToPath(
   new URL("../../supabase/migrations/20260824000006_export_templates_optional_destination.sql", import.meta.url),
 );
+const workbookStorageMigrationPath = fileURLToPath(
+  new URL("../../supabase/migrations/20260827151359_export_template_workbooks.sql", import.meta.url),
+);
 
 describe("Supabase hosted account boundary", () => {
   it("enables RLS on every exposed DemandLint table", () => {
@@ -114,4 +117,15 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain("char_length(trim(destination_type)) between 1 and 120");
   });
 
+  it("keeps template workbooks private and isolates every storage operation by workspace", () => {
+    const migration = readFileSync(workbookStorageMigrationPath, "utf8");
+    expect(migration).toContain("'export-template-workbooks'");
+    expect(migration).toContain("false,");
+    expect(migration).toContain("on storage.objects for select to authenticated");
+    expect(migration).toContain("on storage.objects for insert to authenticated");
+    expect(migration).toContain("on storage.objects for update to authenticated");
+    expect(migration).toContain("on storage.objects for delete to authenticated");
+    expect(migration.match(/private\.is_organization_member/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(migration).not.toMatch(/public\s*=\s*true/i);
+  });
 });

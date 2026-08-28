@@ -8,6 +8,7 @@ import {
   type ContactPreferences,
   DEFAULT_CONTACT_PREFERENCES,
   type ExportTemplate,
+  type ExportTemplateWorkbookChange,
   type ImportSession,
   type MappingTemplate,
   type MembershipRole,
@@ -379,9 +380,9 @@ export default function App() {
     setMappingTemplates(await listBrowserMappingTemplates(activeOrganizationId));
   }
 
-  async function saveExportTemplate(template: ExportTemplate): Promise<ExportTemplate> {
+  async function saveExportTemplate(template: ExportTemplate, workbookChange?: ExportTemplateWorkbookChange): Promise<ExportTemplate> {
     if (!activeOrganizationId) throw new Error("Open a workspace before saving a template.");
-    const saved = await saveBrowserExportTemplate(template, activeOrganizationId);
+    const saved = await saveBrowserExportTemplate(template, activeOrganizationId, workbookChange);
     setExportTemplates(await listBrowserExportTemplates(activeOrganizationId));
     return saved;
   }

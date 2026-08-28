@@ -42,4 +42,16 @@ describe("local export template repository", () => {
     expect(stored).not.toContain("701xx");
     expect((await repository.getById("legacy"))?.columns[0]?.source).toEqual({ kind: "fixed" });
   });
+
+  it("persists, replaces and detaches optional workbook metadata", async () => {
+    const repository = new LocalExportTemplateRepository(new MemoryStorage());
+    const workbook = { storagePath: "org/one/first.xlsx", originalFileName: "first.xlsx", originalFileType: "xlsx" as const, storedFileType: "xlsx" as const, targetSheet: "Import", headerRow: 2, firstDataRow: 3 };
+    await repository.save({ ...template, workbook });
+    expect((await repository.getById("one"))?.workbook).toEqual(workbook);
+    const replacement = { ...workbook, storagePath: "org/one/replacement.xlsx", originalFileName: "replacement.xlsx" };
+    await repository.save({ ...template, workbook: replacement });
+    expect((await repository.getById("one"))?.workbook?.storagePath).toBe("org/one/replacement.xlsx");
+    await repository.save(template);
+    expect((await repository.getById("one"))?.workbook).toBeUndefined();
+  });
 });

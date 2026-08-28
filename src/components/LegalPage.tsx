@@ -159,7 +159,8 @@ function PrivacyContent() {
           <li>your work email and the profile name derived from it;</li>
           <li>your organizations, invitations, members, roles and active organization;</li>
           <li>your phone and email priority preferences; and</li>
-          <li>your column-mapping templates.</li>
+          <li>your column-mapping templates; and</li>
+          <li>workbook templates that you explicitly choose to keep for future exports.</li>
         </ul>
         <p>
           DemandLint does not request or store a password. Your browser also stores the technical
@@ -170,10 +171,11 @@ function PrivacyContent() {
       <section>
         <h2>3. Contact files</h2>
         <p>
-          CSV and XLSX files, their contents and generated exports are processed locally in your
-          browser. They are not uploaded to a DemandLint backend in this version. Closing the page or
-          deleting site data ends the related local access, except for files you downloaded or retained
-          yourself.
+          Lead and contact CSV, XLSX and XLS files, their contents and generated exports are processed
+          locally in your browser and are not uploaded to a DemandLint backend. A workbook used to
+          define an export template is stored only when you explicitly enable “Keep workbook for future
+          exports”; it is then kept privately with that workspace template until replaced, detached or
+          deleted.
         </p>
       </section>
 

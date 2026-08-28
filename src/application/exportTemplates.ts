@@ -64,6 +64,18 @@ export interface ExportTemplateColumn {
   valueMappings?: ExportValueMapping[];
 }
 
+export type ExportTemplateWorkbookSourceType = "xlsx" | "xls";
+
+export interface ExportTemplateWorkbook {
+  storagePath: string;
+  originalFileName: string;
+  originalFileType: ExportTemplateWorkbookSourceType;
+  storedFileType: "xlsx";
+  targetSheet: string;
+  headerRow: number;
+  firstDataRow: number;
+}
+
 export interface ExportTemplate {
   id: string;
   organizationId?: string;
@@ -73,6 +85,7 @@ export interface ExportTemplate {
   defaultFormat: DataExportFormat;
   delimiter?: "," | ";" | "\t";
   sheetName?: string;
+  workbook?: ExportTemplateWorkbook;
   builtIn?: boolean;
 }
 
@@ -350,10 +363,15 @@ export function buildTemplateExport(
 
 export function cloneExportTemplate(template: ExportTemplate, overrides: Partial<ExportTemplate> = {}): ExportTemplate {
   const idMap = new Map(template.columns.map((item) => [item.id, templateColumnId()]));
+  const { workbook: _sourceWorkbook, ...templateWithoutWorkbook } = template;
+  const { workbook: overrideWorkbook, ...otherOverrides } = overrides;
   return {
-    ...template,
-    ...overrides,
+    ...templateWithoutWorkbook,
+    ...otherOverrides,
     builtIn: overrides.builtIn ?? false,
+    // A stored workbook belongs to one template. A clone starts detached unless
+    // the caller explicitly supplies an independently stored workbook.
+    ...(overrideWorkbook ? { workbook: { ...overrideWorkbook } } : {}),
     columns: template.columns.map((item) => ({
       ...item,
       id: idMap.get(item.id)!,
@@ -375,6 +393,9 @@ export function copyExportTemplate(template: ExportTemplate, overrides: Partial<
   return {
     ...template,
     ...overrides,
+    ...(template.workbook || overrides.workbook
+      ? { workbook: { ...(template.workbook ?? overrides.workbook!), ...(overrides.workbook ?? {}) } }
+      : {}),
     columns: template.columns.map((item) => ({
       ...item,
       source: { ...item.source },
@@ -392,6 +413,7 @@ export function copyExportTemplate(template: ExportTemplate, overrides: Partial<
 export function normalizeExportTemplate(template: ExportTemplate): ExportTemplate {
   return {
     ...template,
+    ...(template.workbook ? { workbook: { ...template.workbook } } : {}),
     columns: template.columns.map((column) => {
       const { required: _required, defaultValue: _defaultValue, ...rest } = column;
       const source = column.source.kind === "parameter"
