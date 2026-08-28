@@ -3,26 +3,26 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const migrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000001_hosted_accounts.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000001_hosted_accounts.sql", import.meta.url),
 );
 const clientPath = fileURLToPath(new URL("../../src/adapters/supabase/client.ts", import.meta.url));
 const memberManagementMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000002_member_management.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000002_member_management.sql", import.meta.url),
 );
 const invitationFunctionPath = fileURLToPath(
   new URL("../../supabase/functions/organization-invitations/index.ts", import.meta.url),
 );
 const roleManagementMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000003_workspace_role_management.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000003_workspace_role_management.sql", import.meta.url),
 );
 const accountDeletionPermissionMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260820_000004_account_deletion_permissions.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260820000004_account_deletion_permissions.sql", import.meta.url),
 );
 const exportTemplatesMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260821_000005_export_templates.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260821000005_export_templates.sql", import.meta.url),
 );
 const optionalDestinationMigrationPath = fileURLToPath(
-  new URL("../../supabase/migrations/20260824_000006_export_templates_optional_destination.sql", import.meta.url),
+  new URL("../../supabase/migrations/20260824000006_export_templates_optional_destination.sql", import.meta.url),
 );
 
 describe("Supabase hosted account boundary", () => {
@@ -113,4 +113,5 @@ describe("Supabase hosted account boundary", () => {
     expect(migration).toContain("destination_type is null");
     expect(migration).toContain("char_length(trim(destination_type)) between 1 and 120");
   });
+
 });

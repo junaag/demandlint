@@ -1,0 +1,59 @@
+
+import { loadEnv } from "vite";
+
+const environment = loadEnv("preprod", process.cwd(), "");
+const supabaseUrl = environment.VITE_SUPABASE_URL;
+const publishableKey = environment.VITE_SUPABASE_PUBLISHABLE_KEY;
+if (!supabaseUrl || !publishableKey) {
+  throw new Error("Local pre-production requires .env.preprod.local. Copy the safe example and provide local Supabase values.");
+}
+
+const identity = {
+  id: "00000000-0000-4000-8000-000000000312",
+  email: "test@demandlint.local",
+  password: "DemandLint-Local-Only-0312!",
+};
+
+const parsedUrl = new URL(supabaseUrl);
+if (parsedUrl.protocol !== "http:" || !["localhost", "127.0.0.1"].includes(parsedUrl.hostname)) {
+  throw new Error("Pre-production smoke test refused a non-local Supabase URL.");
+}
+
+async function readJson(response, label) {
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(`${label} failed (${response.status}): ${JSON.stringify(body)}`);
+  return body;
+}
+
+const authResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+  method: "POST",
+  headers: { apikey: publishableKey, "Content-Type": "application/json" },
+  body: JSON.stringify({ email: identity.email, password: identity.password }),
+});
+const auth = await readJson(authResponse, "Local Auth sign-in");
+if (auth.user?.id !== identity.id || !auth.access_token) {
+  throw new Error("Local Auth returned an unexpected test identity.");
+}
+
+const headers = {
+  apikey: publishableKey,
+  Authorization: `Bearer ${auth.access_token}`,
+};
+const workspace = await readJson(await fetch(
+  `${supabaseUrl}/rest/v1/profiles?select=email,display_name,active_organization_id&id=eq.${identity.id}`,
+  { headers },
+), "Workspace query");
+if (workspace[0]?.email !== identity.email || !workspace[0]?.active_organization_id) {
+  throw new Error("The deterministic local workspace seed is missing.");
+}
+
+const templates = await readJson(await fetch(
+  `${supabaseUrl}/rest/v1/export_templates?select=id,name,config&organization_id=eq.${workspace[0].active_organization_id}`,
+  { headers },
+), "Export-template query");
+if (!Array.isArray(templates) || templates.length < 3) {
+  throw new Error("Representative local export-template seeds are missing.");
+}
+
+
+console.log(`Local pre-production smoke test passed: ${identity.email}, ${templates.length} templates.`);

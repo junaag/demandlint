@@ -61,6 +61,26 @@ input:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .12
 }
 
 .workspace-topbar { gap: 22px; }
+
+.environment-indicator {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 1000;
+  display: grid;
+  gap: 2px;
+  padding: 8px 11px;
+  border: 1px solid #d9a441;
+  border-radius: 8px;
+  background: #fff8e7;
+  box-shadow: 0 4px 16px rgb(63 47 16 / 14%);
+  color: #6b4910;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.environment-indicator strong { letter-spacing: .08em; }
+.environment-indicator span { color: #83662f; }
 .app-navigation { display: flex; align-self: stretch; gap: 4px; }
 .app-navigation a {
   display: flex;

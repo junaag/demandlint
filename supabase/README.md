@@ -1,4 +1,16 @@
-# DemandLint hosted account setup
+# DemandLint Supabase setup
+
+For the local pre-production workflow, use the root-level `npm run preprod*` commands documented in
+the main README. `config.toml` is intentionally local-only, replays the existing migrations, and
+loads `seed.sql`; never link or push that seed to a hosted project.
+
+The migrations through `20260824000006` predate the repository's Supabase CLI configuration and
+were documented for manual SQL Editor deployment. Their canonical timestamps support local replay;
+they must not be treated as proof of matching production migration history. Before any future
+production `supabase db push`, compare the remote history with `supabase migration list --linked`
+and deliberately baseline or repair it. Do not run that reconciliation as part of local pre-prod.
+
+## Hosted production account setup
 
 DemandLint V0.2.2 uses Supabase only for the account control plane: authentication, profiles,
 organizations, memberships, contact preferences and mapping templates. CSV/XLSX lead files and
@@ -12,7 +24,7 @@ the Supabase dashboard or another secret manager; do not add them to this reposi
 ## 2. Apply the database migration
 
 Open **SQL Editor** in the Supabase dashboard, paste the complete contents of
-`migrations/20260820_000001_hosted_accounts.sql`, and run it once.
+`migrations/20260820000001_hosted_accounts.sql`, and run it once.
 
 The migration creates the multi-tenant tables, RPC functions and Row Level Security policies. It
 also creates a first organization when a user registers and accepts matching organization invites
@@ -82,6 +94,6 @@ Resend. Add these Edge Function secrets before deploying it:
 - `RESEND_FROM_EMAIL`: `DemandLint <auth@demandlint.com>`
 - `DEMANDLINT_APP_URL`: `https://demandlint.com`
 
-Deploy `migrations/20260820_000002_member_management.sql`, then deploy the function with JWT
+Deploy `migrations/20260820000002_member_management.sql`, then deploy the function with JWT
 verification enabled. Invitation links use `demandlint.com` and open a prefilled registration or
 login page; DemandLint then sends the usual 6-digit authentication code.

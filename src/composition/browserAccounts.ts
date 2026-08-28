@@ -1,11 +1,13 @@
 import { localAccountWorkspaceRepository } from "../adapters/browser/localAccountWorkspaceRepository";
 import { isSupabaseConfigured } from "../adapters/supabase/client";
+import { localPreprodAuthProvider } from "../adapters/supabase/localPreprodAuthProvider";
 import { supabaseAccountWorkspaceRepository } from "../adapters/supabase/supabaseAccountWorkspaceRepository";
 import type {
   AccountWorkspace,
   MembershipRole,
   OrganizationMember,
 } from "../application/accounts/domain";
+import { getBrowserRuntimeEnvironment } from "./browserRuntimeEnvironment";
 
 export type BrowserAccountMode = "signup" | "login";
 export type BrowserOAuthProvider = "google" | "azure";
@@ -26,9 +28,11 @@ export function isBrowserOAuthProviderEnabled(provider: BrowserOAuthProvider): b
 }
 
 export async function loadBrowserAccountWorkspace(): Promise<AccountWorkspace | null> {
-  return isSupabaseConfigured()
-    ? supabaseAccountWorkspaceRepository.loadWorkspace()
-    : localAccountWorkspaceRepository.loadWorkspace();
+  if (!isSupabaseConfigured()) return localAccountWorkspaceRepository.loadWorkspace();
+  if (getBrowserRuntimeEnvironment().authMode === "bypass") {
+    await localPreprodAuthProvider.ensureAuthenticated();
+  }
+  return supabaseAccountWorkspaceRepository.loadWorkspace();
 }
 
 export async function requestBrowserAccountAccess(
