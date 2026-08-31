@@ -17,8 +17,12 @@ describe("AccountGate", () => {
     );
 
     expect(html).toContain("Send me a secure code");
-    expect(html).toContain("Google");
-    expect(html).toContain("Microsoft");
+    expect(html).toContain('aria-label="Continue with Google"');
+    expect(html).toContain('aria-label="Continue with Microsoft"');
+    expect(html).toContain(">Google</span>");
+    expect(html).toContain(">Microsoft</span>");
+    expect(html.match(/class="auth-provider-button"/g)).toHaveLength(2);
+    expect(html.match(/class="auth-provider-icon"/g)).toHaveLength(2);
     expect(html).not.toContain("Organization");
     expect(html).not.toContain("Continue with email");
     expect(html).not.toContain("Login");
