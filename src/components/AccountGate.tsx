@@ -152,24 +152,38 @@ export function AccountGate({
 
         {stage === "email" && (
           <>
-            <div className="auth-providers" aria-label="Sign-in options">
+            <div className="auth-providers" role="group" aria-label="Sign-in options">
               <button
+                className="auth-provider-button"
                 type="button"
+                aria-label="Continue with Google"
                 disabled={!googleEnabled || busy}
                 title={googleEnabled ? "Continue with Google" : "Google sign-in is not configured"}
                 onClick={() => void openProvider("google")}
               >
-                <span className="google-symbol" aria-hidden="true">G</span>
-                Google
+                <svg className="auth-provider-icon" viewBox="0 0 18 18" aria-hidden="true">
+                  <path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.482h4.844a4.14 4.14 0 0 1-1.797 2.715v2.258h2.909c1.703-1.568 2.684-3.878 2.684-6.614Z" />
+                  <path fill="#34A853" d="M9 18c2.43 0 4.468-.806 5.956-2.181l-2.909-2.258c-.806.54-1.836.859-3.047.859-2.344 0-4.328-1.584-5.037-3.71H.956v2.332A9 9 0 0 0 9 18Z" />
+                  <path fill="#FBBC05" d="M3.963 10.71A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.283-1.71V4.958H.956A9 9 0 0 0 0 9c0 1.452.347 2.827.956 4.042l3.007-2.332Z" />
+                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.507.454 3.441 1.345l2.582-2.582C13.464.891 11.426 0 9 0A9 9 0 0 0 .956 4.958L3.963 7.29C4.672 5.164 6.656 3.58 9 3.58Z" />
+                </svg>
+                <span className="auth-provider-label">Google</span>
               </button>
               <button
+                className="auth-provider-button"
                 type="button"
+                aria-label="Continue with Microsoft"
                 disabled={!microsoftEnabled || busy}
                 title={microsoftEnabled ? "Continue with Microsoft" : "Microsoft sign-in is not configured"}
                 onClick={() => void openProvider("azure")}
               >
-                <span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>
-                Microsoft
+                <svg className="auth-provider-icon" viewBox="0 0 18 18" aria-hidden="true">
+                  <path fill="#F35325" d="M0 0h8.5v8.5H0z" />
+                  <path fill="#81BC06" d="M9.5 0H18v8.5H9.5z" />
+                  <path fill="#05A6F0" d="M0 9.5h8.5V18H0z" />
+                  <path fill="#FFBA08" d="M9.5 9.5H18V18H9.5z" />
+                </svg>
+                <span className="auth-provider-label">Microsoft</span>
               </button>
             </div>
 
