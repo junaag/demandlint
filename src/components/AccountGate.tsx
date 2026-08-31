@@ -14,6 +14,11 @@ interface AccountGateProps {
   onVerifyCode: (email: string, code: string) => Promise<void>;
   onProviderSignIn: (provider: OAuthProvider) => Promise<void>;
   error?: string | null;
+  errorTitle?: string | null;
+  loginHref: string;
+  signupHref: string;
+  termsHref: string;
+  privacyHref: string;
 }
 
 export function AccountGate({
@@ -26,6 +31,11 @@ export function AccountGate({
   onVerifyCode,
   onProviderSignIn,
   error,
+  errorTitle,
+  loginHref,
+  signupHref,
+  termsHref,
+  privacyHref,
 }: AccountGateProps) {
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
@@ -148,7 +158,12 @@ export function AccountGate({
         </>
       )}
 
-      {error && <div className="alert error-alert auth-error" role="alert">{error}</div>}
+      {error && (
+        <div className="alert error-alert auth-error" role="alert">
+          {errorTitle && <strong>{errorTitle}</strong>}
+          <span>{error}</span>
+        </div>
+      )}
       {notice && <div className="alert success-alert auth-error" role="status">{notice}</div>}
 
       {stage === "email" ? (
@@ -206,7 +221,7 @@ export function AccountGate({
       {stage === "email" && (
         <p className="auth-switch">
           {creating ? "Already have an account?" : "Do not have an account yet?"}{" "}
-          <a href={creating ? "?page=login" : "./"}>
+          <a href={creating ? loginHref : signupHref}>
             {creating ? "Sign in" : "Create an account for free"}
           </a>
         </p>
@@ -215,8 +230,8 @@ export function AccountGate({
       <p className="auth-legal">
         {creating ? (
           <>
-            By continuing, you agree to the <a href="?page=terms">Terms and Conditions</a> and{" "}
-            <a href="?page=privacy">Privacy Policy</a>.
+            By continuing, you agree to the <a href={termsHref}>Terms and Conditions</a> and{" "}
+            <a href={privacyHref}>Privacy Policy</a>.
           </>
         ) : hosted ? (
           <>DemandLint uses a secure one-time email code. No password is requested or stored.</>

@@ -6,7 +6,12 @@ import type {
   OrganizationMember,
   OrganizationMembership,
 } from "../../application/accounts/domain";
-import { getSupabaseClient, publicApplicationUrl } from "./client";
+import {
+  emailEligibilityError,
+  normalizeProfessionalEmail,
+} from "../../application/auth/emailEligibility";
+import type { WorkspacePage } from "../../application/workspaceNavigation";
+import { getSupabaseClient, publicAuthCallbackUrl } from "./client";
 
 type AccountMode = "signup" | "login";
 type OAuthProvider = "google" | "azure";
@@ -34,6 +39,15 @@ interface InvitationFunctionResult {
   error?: string;
 }
 
+interface EligibilityRpcRow {
+  eligible: boolean;
+  reason: string | null;
+}
+
+interface AuthenticationCompletionRpcRow {
+  eligibility_status: string;
+}
+
 const workspaceRetryDelaysMs = [0, 500, 1_000] as const;
 
 function isJwtClockSkewError(message: string): boolean {
@@ -44,12 +58,8 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds));
 }
 
-function normalizeEmail(value: string): string {
-  const email = value.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Enter a valid work email address.");
-  }
-  return email;
+function firstRpcRow<T>(value: T | T[] | null): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value;
 }
 
 function organizationFromRelation(value: MembershipRow["organizations"]): Organization | null {
@@ -58,13 +68,17 @@ function organizationFromRelation(value: MembershipRow["organizations"]): Organi
 }
 
 export class SupabaseAccountWorkspaceRepository {
-  async requestOtp(emailValue: string, mode: AccountMode): Promise<string> {
-    const email = normalizeEmail(emailValue);
+  async requestOtp(
+    emailValue: string,
+    mode: AccountMode,
+    destination: WorkspacePage,
+  ): Promise<string> {
+    const email = await this.requireEligibleEmail(emailValue);
     const { error } = await getSupabaseClient().auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: mode === "signup",
-        emailRedirectTo: publicApplicationUrl(),
+        emailRedirectTo: publicAuthCallbackUrl(destination),
       },
     });
     if (error) throw new Error(error.message);
@@ -72,7 +86,7 @@ export class SupabaseAccountWorkspaceRepository {
   }
 
   async verifyOtp(emailValue: string, token: string): Promise<AccountWorkspace> {
-    const email = normalizeEmail(emailValue);
+    const email = normalizeProfessionalEmail(emailValue);
     const cleanToken = token.replace(/\s/g, "");
     if (!/^\d{6}$/.test(cleanToken)) throw new Error("Enter the 6-digit code from your email.");
     const { error } = await getSupabaseClient().auth.verifyOtp({
@@ -86,10 +100,13 @@ export class SupabaseAccountWorkspaceRepository {
     return workspace;
   }
 
-  async signInWithProvider(provider: OAuthProvider): Promise<void> {
+  async signInWithProvider(provider: OAuthProvider, destination: WorkspacePage): Promise<void> {
     const { error } = await getSupabaseClient().auth.signInWithOAuth({
       provider,
-      options: { redirectTo: publicApplicationUrl() },
+      options: {
+        redirectTo: publicAuthCallbackUrl(destination),
+        ...(provider === "azure" ? { scopes: "email" } : {}),
+      },
     });
     if (error) throw new Error(error.message);
   }
@@ -100,6 +117,8 @@ export class SupabaseAccountWorkspaceRepository {
     if (sessionError) throw new Error(sessionError.message);
     const user = sessionData.session?.user;
     if (!user?.email) return null;
+
+    await this.completeAuthentication();
 
     let profile: ProfileRow | undefined;
     let rows: MembershipRow[] | undefined;
@@ -197,7 +216,7 @@ export class SupabaseAccountWorkspaceRepository {
     emailValue: string,
     role: MembershipRole,
   ): Promise<OrganizationMember> {
-    const email = normalizeEmail(emailValue);
+    const email = normalizeProfessionalEmail(emailValue);
     await this.invokeInvitationFunction({
       action: "invite",
       organizationId,
@@ -258,6 +277,39 @@ export class SupabaseAccountWorkspaceRepository {
     const { error } = await client.rpc("delete_current_account");
     if (error) throw new Error(error.message);
     await client.auth.signOut({ scope: "local" });
+  }
+
+  private async requireEligibleEmail(emailValue: string): Promise<string> {
+    const email = normalizeProfessionalEmail(emailValue);
+    const { data, error } = await getSupabaseClient().rpc("evaluate_email_eligibility", {
+      input_email: email,
+    });
+    if (error) throw new Error(error.message);
+    const result = firstRpcRow(data as EligibilityRpcRow | EligibilityRpcRow[] | null);
+    if (!result) throw new Error("The email eligibility check could not be completed.");
+    const policyError = emailEligibilityError(result.reason);
+    if (!result.eligible && policyError) throw policyError;
+    if (!result.eligible) throw new Error("This email address cannot be used with DemandLint.");
+    return email;
+  }
+
+  private async completeAuthentication(): Promise<void> {
+    const client = getSupabaseClient();
+    const { data, error } = await client.rpc("complete_authentication");
+    if (error) throw new Error(error.message);
+    const result = firstRpcRow(
+      data as AuthenticationCompletionRpcRow | AuthenticationCompletionRpcRow[] | null,
+    );
+    if (!result) throw new Error("Your authenticated account could not be prepared.");
+    const policyError = emailEligibilityError(result.eligibility_status);
+    if (policyError) {
+      await client.auth.signOut({ scope: "local" });
+      throw policyError;
+    }
+    if (result.eligibility_status !== "allowed") {
+      await client.auth.signOut({ scope: "local" });
+      throw new Error("This email address cannot be used with DemandLint.");
+    }
   }
 
   private async invokeInvitationFunction(body: Record<string, string>): Promise<void> {

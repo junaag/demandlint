@@ -1,12 +1,14 @@
 {
   "name": "demandlint",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "node scripts/create-static-routes.mjs",
     "build:preprod": "vite build --mode preprod",
+    "postbuild:preprod": "node scripts/create-static-routes.mjs",
     "preview": "vite preview",
     "preprod:infra": "supabase start --exclude realtime,imgproxy,studio,mailpit,postgres-meta,edge-runtime,logflare,vector,supavisor",
     "preprod": "npm run preprod:infra && npm run build:preprod && vite preview --host 127.0.0.1 --port 4173 --strictPort",

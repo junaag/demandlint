@@ -1,10 +1,16 @@
 type LegalPageKind = "terms" | "privacy";
 
+import { publicPageHref } from "../application/workspaceNavigation";
+
 interface LegalPageProps {
   kind: LegalPageKind;
 }
 
 export function LegalPage({ kind }: LegalPageProps) {
+  const alternateLegalHref = publicPageHref(
+    kind === "terms" ? "privacy" : "terms",
+    typeof window === "undefined" ? "/" : window.location.pathname,
+  );
   return (
     <main className="legal-page">
       <article className="legal-document">
@@ -29,7 +35,7 @@ export function LegalPage({ kind }: LegalPageProps) {
         {kind === "terms" ? <TermsContent /> : <PrivacyContent />}
 
         <nav className="legal-navigation" aria-label="Legal documents">
-          <a href={kind === "terms" ? "?page=privacy" : "?page=terms"}>
+          <a href={alternateLegalHref}>
             {kind === "terms" ? "Read the Privacy Policy" : "Read the Terms and Conditions"}
           </a>
           <a href="./">Back to account creation</a>

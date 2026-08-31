@@ -7,6 +7,11 @@ import type {
   OrganizationMember,
   OrganizationMembership,
 } from "../../application/accounts/domain";
+import {
+  assertProfessionalEmail,
+  PERSONAL_GMAIL_EXCEPTION,
+  PERSONAL_GMAIL_WORKSPACE_NAME,
+} from "../../application/auth/emailEligibility";
 
 interface StorageLike {
   getItem(key: string): string | null;
@@ -44,14 +49,6 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function validateEmail(value: string): string {
-  const email = normalizeEmail(value);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Enter a valid work email address.");
-  }
-  return email;
-}
-
 function titleCase(value: string): string {
   return value
     .split(/[._\-\s]+/)
@@ -65,6 +62,7 @@ function profileNameFromEmail(email: string): string {
 }
 
 function organizationNameFromEmail(email: string): string {
+  if (email === PERSONAL_GMAIL_EXCEPTION) return PERSONAL_GMAIL_WORKSPACE_NAME;
   const domain = email.split("@")[1]?.split(".")[0] ?? "";
   return `${titleCase(domain) || "My"} workspace`;
 }
@@ -99,7 +97,7 @@ export class LocalAccountWorkspaceRepository {
   }
 
   createAccount(input: CreateAccountInput): AccountWorkspace {
-    const email = validateEmail(input.email);
+    const email = assertProfessionalEmail(input.email);
     const database = this.read();
     if (database.users.some((candidate) => candidate.email === email)) {
       throw new Error("An account already exists with this email. Use the sign-in page.");
@@ -131,7 +129,7 @@ export class LocalAccountWorkspaceRepository {
   }
 
   signIn(emailValue: string): AccountWorkspace {
-    const email = validateEmail(emailValue);
+    const email = assertProfessionalEmail(emailValue);
     const database = this.read();
     const user = database.users.find((candidate) => candidate.email === email);
     if (!user) {

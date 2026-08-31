@@ -7,6 +7,7 @@ import type {
   MembershipRole,
   OrganizationMember,
 } from "../application/accounts/domain";
+import type { WorkspacePage } from "../application/workspaceNavigation";
 import { getBrowserRuntimeEnvironment } from "./browserRuntimeEnvironment";
 
 export type BrowserAccountMode = "signup" | "login";
@@ -38,9 +39,10 @@ export async function loadBrowserAccountWorkspace(): Promise<AccountWorkspace | 
 export async function requestBrowserAccountAccess(
   email: string,
   mode: BrowserAccountMode,
+  destination: WorkspacePage,
 ): Promise<AccountAccessResult> {
   if (isSupabaseConfigured()) {
-    await supabaseAccountWorkspaceRepository.requestOtp(email, mode);
+    await supabaseAccountWorkspaceRepository.requestOtp(email, mode, destination);
     return { verificationRequired: true };
   }
   const workspace = mode === "signup"
@@ -54,9 +56,12 @@ export async function verifyBrowserAccountOtp(email: string, token: string): Pro
   return supabaseAccountWorkspaceRepository.verifyOtp(email, token);
 }
 
-export async function signInBrowserAccountWithProvider(provider: BrowserOAuthProvider): Promise<void> {
+export async function signInBrowserAccountWithProvider(
+  provider: BrowserOAuthProvider,
+  destination: WorkspacePage,
+): Promise<void> {
   if (!isBrowserOAuthProviderEnabled(provider)) throw new Error("This sign-in provider is not enabled yet.");
-  await supabaseAccountWorkspaceRepository.signInWithProvider(provider);
+  await supabaseAccountWorkspaceRepository.signInWithProvider(provider, destination);
 }
 
 export async function signOutBrowserAccount(): Promise<void> {
