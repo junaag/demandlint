@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createBuildMetadata } from "./src/application/buildMetadataFactory";
 import { resolveRuntimeEnvironment } from "./src/application/runtimeEnvironment";
 
@@ -35,6 +36,10 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rollupOptions: {
+        input: {
+          main: resolve(process.cwd(), "index.html"),
+          auth: resolve(process.cwd(), "auth/index.html"),
+        },
         plugins: [{
           name: "demandlint-version-metadata",
           generateBundle() {

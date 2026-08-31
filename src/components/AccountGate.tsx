@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 export type AccountMode = "signup" | "login";
 type OAuthProvider = "google" | "azure";
@@ -16,8 +16,33 @@ interface AccountGateProps {
   error?: string | null;
 }
 
+function authPathFor(pathname: string): string {
+  const normalized = pathname.replace(/\/+$/, "");
+  if (normalized.endsWith("/auth")) return normalized || "/auth";
+  return normalized ? `${normalized}/auth` : "/auth";
+}
+
+function workspacePathFor(pathname: string): string {
+  const normalized = pathname.replace(/\/+$/, "");
+  if (!normalized.endsWith("/auth")) return pathname || "/";
+  return normalized.slice(0, -"/auth".length) || "/";
+}
+
+function replaceWithAuthPath(): void {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  params.delete("page");
+  const search = params.toString();
+  const href = `${authPathFor(window.location.pathname)}${search ? `?${search}` : ""}`;
+  window.history.replaceState(null, "", href);
+}
+
+function replaceWithWorkspacePath(): void {
+  if (typeof window === "undefined") return;
+  window.history.replaceState(null, "", workspacePathFor(window.location.pathname));
+}
+
 export function AccountGate({
-  mode,
   initialEmail = "",
   hosted,
   googleEnabled,
@@ -32,19 +57,39 @@ export function AccountGate({
   const [stage, setStage] = useState<AuthStage>("email");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const creating = mode === "signup";
+
+  useEffect(() => {
+    replaceWithAuthPath();
+  }, []);
+
+  async function requestUnifiedAccess(): Promise<boolean> {
+    if (hosted) {
+      // Always allow account creation so existing and new users follow the same non-enumerating flow.
+      return onRequestAccess(email, "signup");
+    }
+
+    // Keep the local preview convenient without changing the local account repository contract.
+    try {
+      return await onRequestAccess(email, "login");
+    } catch {
+      return onRequestAccess(email, "signup");
+    }
+  }
 
   async function requestAccess(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setNotice(null);
+    if (!hosted) replaceWithWorkspacePath();
     try {
-      const verificationRequired = await onRequestAccess(email, mode);
+      const verificationRequired = await requestUnifiedAccess();
       if (verificationRequired) {
+        replaceWithAuthPath();
         setStage("code");
         setCode("");
       }
     } catch {
+      if (!hosted) replaceWithAuthPath();
       // The parent exposes the backend error in the shared alert.
     } finally {
       setBusy(false);
@@ -55,9 +100,11 @@ export function AccountGate({
     event.preventDefault();
     setBusy(true);
     setNotice(null);
+    replaceWithWorkspacePath();
     try {
       await onVerifyCode(email, code);
     } catch {
+      replaceWithAuthPath();
       // The parent exposes the backend error in the shared alert.
     } finally {
       setBusy(false);
@@ -68,7 +115,7 @@ export function AccountGate({
     setBusy(true);
     setNotice(null);
     try {
-      await onRequestAccess(email, mode);
+      await requestUnifiedAccess();
       setNotice("A new code has been sent.");
     } catch {
       // The parent exposes the backend error in the shared alert.
@@ -86,54 +133,44 @@ export function AccountGate({
     }
   }
 
-  const formCard = (
-    <section className={`auth-card ${creating ? "signup-card" : ""}`} aria-labelledby="auth-title">
-      {!creating && (
+  return (
+    <main className="auth-page login-page">
+      <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand">
           <span className="auth-brand-mark" aria-hidden="true">D</span>
           <strong>DemandLint</strong>
         </div>
-      )}
 
-      <div className="auth-heading">
-        <h1 id="auth-title">
-          {stage === "code"
-            ? "Check your email"
-            : creating
-              ? "Start cleaning leads for free"
-              : "Welcome back!"}
-        </h1>
-        <p>
-          {stage === "code"
-            ? <>Enter the 6-digit code sent to <strong>{email}</strong>.</>
-            : creating
-              ? "Create your workspace with your work email. No password needed."
-              : "Sign in with your work email. We will send you a secure one-time code."}
-        </p>
-      </div>
+        <div className="auth-heading">
+          <h1 id="auth-title">{stage === "code" ? "Check your email" : "Continue to DemandLint"}</h1>
+          <p>
+            {stage === "code"
+              ? <>Enter the 6-digit code sent to <strong>{email}</strong>.</>
+              : "Enter your work email. We will send you a secure one-time code. No password needed."}
+          </p>
+        </div>
 
-      {stage === "email" && (
-        <>
-          <div className={`auth-providers ${creating ? "" : "login-providers"}`} aria-label="Sign-in options">
-            <button
-              type="button"
-              disabled={!googleEnabled || busy}
-              title={googleEnabled ? "Continue with Google" : "Google sign-in coming soon"}
-              onClick={() => void openProvider("google")}
-            >
-              <span className="google-symbol" aria-hidden="true">G</span>
-              Google
-            </button>
-            <button
-              type="button"
-              disabled={!microsoftEnabled || busy}
-              title={microsoftEnabled ? "Continue with Microsoft" : "Microsoft sign-in coming soon"}
-              onClick={() => void openProvider("azure")}
-            >
-              <span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>
-              Microsoft
-            </button>
-            {!creating && (
+        {stage === "email" && (
+          <>
+            <div className="auth-providers login-providers" aria-label="Sign-in options">
+              <button
+                type="button"
+                disabled={!googleEnabled || busy}
+                title={googleEnabled ? "Continue with Google" : "Google sign-in coming soon"}
+                onClick={() => void openProvider("google")}
+              >
+                <span className="google-symbol" aria-hidden="true">G</span>
+                Google
+              </button>
+              <button
+                type="button"
+                disabled={!microsoftEnabled || busy}
+                title={microsoftEnabled ? "Continue with Microsoft" : "Microsoft sign-in coming soon"}
+                onClick={() => void openProvider("azure")}
+              >
+                <span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>
+                Microsoft
+              </button>
               <button type="button" disabled title="Organization SSO coming later">
                 <svg className="organization-symbol" viewBox="0 0 24 24" aria-hidden="true">
                   <circle cx="8" cy="8" r="4" />
@@ -141,116 +178,75 @@ export function AccountGate({
                 </svg>
                 Organization
               </button>
-            )}
-          </div>
+            </div>
 
-          <div className="auth-separator"><span>or</span></div>
-        </>
-      )}
-
-      {error && <div className="alert error-alert auth-error" role="alert">{error}</div>}
-      {notice && <div className="alert success-alert auth-error" role="status">{notice}</div>}
-
-      {stage === "email" ? (
-        <form className="auth-form" onSubmit={(event) => void requestAccess(event)}>
-          <label>
-            <span>Work email</span>
-            <input
-              required
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@company.com"
-              autoFocus
-            />
-          </label>
-          <button className="button primary auth-submit" type="submit" disabled={busy}>
-            {busy ? "Sending code…" : creating ? "Create my account" : "Continue with email"}
-          </button>
-        </form>
-      ) : (
-        <form className="auth-form otp-form" onSubmit={(event) => void verifyCode(event)}>
-          <label>
-            <span>Verification code</span>
-            <input
-              required
-              className="otp-input"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="000000"
-              aria-describedby="otp-help"
-              autoFocus
-            />
-          </label>
-          <p id="otp-help" className="otp-help">The code expires shortly and can only be used once.</p>
-          <button className="button primary auth-submit" type="submit" disabled={busy || code.length !== 6}>
-            {busy ? "Verifying…" : "Verify and continue"}
-          </button>
-          <div className="otp-actions">
-            <button type="button" className="text-button" disabled={busy} onClick={() => void resendCode()}>
-              Resend code
-            </button>
-            <button type="button" className="text-button" disabled={busy} onClick={() => setStage("email")}>
-              Change email
-            </button>
-          </div>
-        </form>
-      )}
-
-      {stage === "email" && (
-        <p className="auth-switch">
-          {creating ? "Already have an account?" : "Do not have an account yet?"}{" "}
-          <a href={creating ? "?page=login" : "./"}>
-            {creating ? "Sign in" : "Create an account for free"}
-          </a>
-        </p>
-      )}
-
-      <p className="auth-legal">
-        {creating ? (
-          <>
-            By continuing, you agree to the <a href="?page=terms">Terms and Conditions</a> and{" "}
-            <a href="?page=privacy">Privacy Policy</a>.
+            <div className="auth-separator"><span>or</span></div>
           </>
-        ) : hosted ? (
-          <>DemandLint uses a secure one-time email code. No password is requested or stored.</>
-        ) : (
-          <>Local development preview: no real email is sent and no password is stored.</>
         )}
-      </p>
-    </section>
-  );
 
-  if (!creating) return <main className="auth-page login-page">{formCard}</main>;
+        {error && <div className="alert error-alert auth-error" role="alert">{error}</div>}
+        {notice && <div className="alert success-alert auth-error" role="status">{notice}</div>}
 
-  return (
-    <main className="auth-page signup-page">
-      <div className="signup-layout">
-        <section className="signup-intro" aria-labelledby="signup-intro-title">
-          <div className="signup-brand">
-            <span className="auth-brand-mark" aria-hidden="true">D</span>
-            <strong>DemandLint</strong>
-          </div>
-          <p className="eyebrow">CRM IMPORT PRE-FLIGHT</p>
-          <h2 id="signup-intro-title">Clean every lead file before it reaches your CRM.</h2>
-          <p>
-            Detect mapping issues, normalize contact details and review duplicates before bad data
-            reaches Salesforce or another CRM.
-          </p>
-          <ul className="signup-benefits">
-            <li><span>✓</span> CSV and multi-sheet Excel support</li>
-            <li><span>✓</span> Smart phone and email prioritization</li>
-            <li><span>✓</span> Local processing — your lead files are never uploaded</li>
-          </ul>
-        </section>
-        {formCard}
-      </div>
+        {stage === "email" ? (
+          <form className="auth-form" onSubmit={(event) => void requestAccess(event)}>
+            <label>
+              <span>Work email</span>
+              <input
+                required
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@company.com"
+                autoFocus
+              />
+            </label>
+            <button className="button primary auth-submit" type="submit" disabled={busy}>
+              {busy ? "Sending code…" : "Continue with email"}
+            </button>
+          </form>
+        ) : (
+          <form className="auth-form otp-form" onSubmit={(event) => void verifyCode(event)}>
+            <label>
+              <span>Verification code</span>
+              <input
+                required
+                className="otp-input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                aria-describedby="otp-help"
+                autoFocus
+              />
+            </label>
+            <p id="otp-help" className="otp-help">The code expires shortly and can only be used once.</p>
+            <button className="button primary auth-submit" type="submit" disabled={busy || code.length !== 6}>
+              {busy ? "Verifying…" : "Verify and continue"}
+            </button>
+            <div className="otp-actions">
+              <button type="button" className="text-button" disabled={busy} onClick={() => void resendCode()}>
+                Resend code
+              </button>
+              <button type="button" className="text-button" disabled={busy} onClick={() => setStage("email")}>
+                Change email
+              </button>
+            </div>
+          </form>
+        )}
+
+        <p className="auth-legal">
+          By continuing, you agree to the <a href="?page=terms">Terms and Conditions</a> and{" "}
+          <a href="?page=privacy">Privacy Policy</a>.
+          {hosted
+            ? " DemandLint uses a secure one-time email code; no password is requested or stored."
+            : " Local development preview: no real email is sent and no password is stored."}
+        </p>
+      </section>
     </main>
   );
 }
