@@ -89,7 +89,10 @@ export class SupabaseAccountWorkspaceRepository {
   async signInWithProvider(provider: OAuthProvider): Promise<void> {
     const { error } = await getSupabaseClient().auth.signInWithOAuth({
       provider,
-      options: { redirectTo: publicApplicationUrl() },
+      options: {
+        redirectTo: publicApplicationUrl(),
+        ...(provider === "azure" ? { scopes: "email" } : {}),
+      },
     });
     if (error) throw new Error(error.message);
   }

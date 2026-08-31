@@ -62,4 +62,21 @@ describe("SupabaseAccountWorkspaceRepository", () => {
     expect(workspace?.session.activeOrganizationId).toBe("org-1");
     expect(workspace?.session.memberships[0]?.role).toBe("member");
   });
+
+  it("requests the email scope required by Microsoft OAuth", async () => {
+    const signInWithOAuth = vi.fn(async () => ({ error: null }));
+    mocks.getSupabaseClient.mockReturnValue({
+      auth: { signInWithOAuth },
+    });
+
+    await new SupabaseAccountWorkspaceRepository().signInWithProvider("azure");
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: "azure",
+      options: {
+        redirectTo: "https://demandlint.com/",
+        scopes: "email",
+      },
+    });
+  });
 });
