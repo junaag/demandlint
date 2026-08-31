@@ -152,11 +152,11 @@ export function AccountGate({
 
         {stage === "email" && (
           <>
-            <div className="auth-providers login-providers" aria-label="Sign-in options">
+            <div className="auth-providers" aria-label="Sign-in options">
               <button
                 type="button"
                 disabled={!googleEnabled || busy}
-                title={googleEnabled ? "Continue with Google" : "Google sign-in coming soon"}
+                title={googleEnabled ? "Continue with Google" : "Google sign-in is not configured"}
                 onClick={() => void openProvider("google")}
               >
                 <span className="google-symbol" aria-hidden="true">G</span>
@@ -165,18 +165,11 @@ export function AccountGate({
               <button
                 type="button"
                 disabled={!microsoftEnabled || busy}
-                title={microsoftEnabled ? "Continue with Microsoft" : "Microsoft sign-in coming soon"}
+                title={microsoftEnabled ? "Continue with Microsoft" : "Microsoft sign-in is not configured"}
                 onClick={() => void openProvider("azure")}
               >
                 <span className="microsoft-symbol" aria-hidden="true"><i /><i /><i /><i /></span>
                 Microsoft
-              </button>
-              <button type="button" disabled title="Organization SSO coming later">
-                <svg className="organization-symbol" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="8" cy="8" r="4" />
-                  <path d="M11 11l9 9m-3-3 2-2m-5-1 2-2" />
-                </svg>
-                Organization
               </button>
             </div>
 
@@ -203,7 +196,7 @@ export function AccountGate({
               />
             </label>
             <button className="button primary auth-submit" type="submit" disabled={busy}>
-              {busy ? "Sending code…" : "Continue with email"}
+              {busy ? "Sending code…" : "Send me a secure code"}
             </button>
           </form>
         ) : (

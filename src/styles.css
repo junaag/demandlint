@@ -465,7 +465,6 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .auth-heading h1 { margin: 0; color: #263451; font-size: clamp(28px, 4vw, 34px); letter-spacing: -.035em; }
 .auth-heading p { margin: 9px auto 0; max-width: 470px; color: #7a8599; font-size: 14px; line-height: 1.5; }
 .auth-providers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.auth-providers.login-providers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .auth-providers button {
   min-height: 50px;
   display: flex;
@@ -489,8 +488,6 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .microsoft-symbol i:nth-child(2) { background: #81bc06; }
 .microsoft-symbol i:nth-child(3) { background: #05a6f0; }
 .microsoft-symbol i:nth-child(4) { background: #ffba08; }
-.organization-symbol { width: 19px; height: 19px; fill: #536482; stroke: #536482; stroke-width: 2; stroke-linecap: round; }
-.organization-symbol path { fill: none; }
 .auth-separator { display: flex; align-items: center; gap: 17px; margin: 24px 0; color: #56627a; }
 .auth-separator::before, .auth-separator::after { content: ""; height: 1px; flex: 1; background: #e0e4eb; }
 .auth-separator span { font-size: 14px; }
@@ -714,7 +711,6 @@ footer { text-align: center; padding: 24px 20px 34px; color: #8a93a3; font-size:
   .auth-brand strong { font-size: 26px; }
   .auth-heading { margin-bottom: 24px; }
   .auth-providers { grid-template-columns: 1fr; gap: 10px; }
-  .auth-providers.login-providers { grid-template-columns: 1fr; }
   .legal-page { width: min(100% - 20px, 920px); padding: 10px 0 28px; }
   .legal-document { padding: 30px 20px 28px; border-radius: 17px; }
   .legal-navigation { align-items: flex-start; flex-direction: column; }

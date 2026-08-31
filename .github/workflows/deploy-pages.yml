@@ -20,8 +20,8 @@ concurrency:
 env:
   VITE_SUPABASE_URL: https://pvbqjpsmyxujksjjxcah.supabase.co
   VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_EgH9aPjXSmTfKepBGc_cRA_Vg6UAVMd
-  VITE_AUTH_GOOGLE_ENABLED: "false"
-  VITE_AUTH_MICROSOFT_ENABLED: "false"
+  VITE_AUTH_GOOGLE_ENABLED: "true"
+  VITE_AUTH_MICROSOFT_ENABLED: "true"
 
 jobs:
   build:
