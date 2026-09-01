@@ -23,10 +23,35 @@ describe("static clean-route entries", () => {
 
     execFileSync(process.execPath, ["scripts/create-static-routes.mjs", outputDirectory]);
 
-    for (const route of ["auth", "import", "templates", "settings", "terms", "privacy"]) {
+    for (const route of [
+      "auth",
+      "import",
+      "templates",
+      "settings",
+      "terms",
+      "privacy",
+      "product",
+      "solutions",
+      "documentation",
+    ]) {
       const html = readFileSync(join(outputDirectory, route, "index.html"), "utf8");
       expect(html).toContain('../assets/app.js');
       expect(html).not.toContain('="./assets/');
     }
+  });
+
+  it("writes route-specific metadata for public pages", () => {
+    const outputDirectory = mkdtempSync(join(tmpdir(), "demandlint-routes-"));
+    temporaryDirectories.push(outputDirectory);
+    writeFileSync(
+      join(outputDirectory, "index.html"),
+      '<title>Home</title><meta name="description" content="Home"><meta property="og:title" content="Home"><meta property="og:description" content="Home"><meta property="og:url" content="https://demandlint.com/">',
+    );
+
+    execFileSync(process.execPath, ["scripts/create-static-routes.mjs", outputDirectory]);
+
+    const productHtml = readFileSync(join(outputDirectory, "product", "index.html"), "utf8");
+    expect(productHtml).toContain("DemandLint Product — Data Mapping, Validation & Export");
+    expect(productHtml).toContain("https://demandlint.com/product");
   });
 });
