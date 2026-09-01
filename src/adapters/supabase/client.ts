@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { authPageHref, type WorkspacePage } from "../../application/workspaceNavigation";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
@@ -26,7 +27,7 @@ export function getSupabaseClient(): SupabaseClient {
   return client;
 }
 
-export function publicApplicationUrl(): string {
+export function publicAuthCallbackUrl(destination: WorkspacePage): string {
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}${window.location.pathname}`;
+  return `${window.location.origin}${authPageHref(window.location.pathname, { next: destination })}`;
 }

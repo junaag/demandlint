@@ -495,7 +495,7 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .auth-separator { display: flex; align-items: center; gap: 17px; margin: 24px 0; color: #56627a; }
 .auth-separator::before, .auth-separator::after { content: ""; height: 1px; flex: 1; background: #e0e4eb; }
 .auth-separator span { font-size: 14px; }
-.auth-error { margin-bottom: 18px; }
+.auth-error { display: grid; gap: 4px; margin-bottom: 18px; }
 .auth-form { display: grid; gap: 22px; }
 .auth-form label { display: grid; gap: 7px; }
 .auth-form label > span { color: #536482; font-size: 13px; font-weight: 700; }

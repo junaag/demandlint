@@ -61,9 +61,14 @@ import { MappingPanel } from "./components/MappingPanel";
 import { MappingTemplatesPanel } from "./components/MappingTemplatesPanel";
 import { UploadPanel } from "./components/UploadPanel";
 import { WorkspaceSettings } from "./components/WorkspaceSettings";
+import { EmailEligibilityError } from "./application/auth/emailEligibility";
 import {
+  authPageHref,
+  getApplicationRoute,
   getWorkspacePage,
+  intendedWorkspacePage,
   isWorkspacePage,
+  publicPageHref,
   workspacePageHref,
   type WorkspacePage,
 } from "./application/workspaceNavigation";
@@ -72,15 +77,15 @@ type PublicRoute = "terms" | "privacy" | null;
 
 function getPublicRoute(): PublicRoute {
   if (typeof window === "undefined") return null;
-  const page = new URLSearchParams(window.location.search).get("page");
-  if (page === "terms") return "terms";
-  if (page === "privacy") return "privacy";
+  const route = getApplicationRoute(window.location.pathname);
+  if (route === "terms") return "terms";
+  if (route === "privacy") return "privacy";
   return null;
 }
 
 function getAccountMode(): AccountMode {
   if (typeof window === "undefined") return "signup";
-  return new URLSearchParams(window.location.search).get("page") === "login" ? "login" : "signup";
+  return new URLSearchParams(window.location.search).get("mode") === "login" ? "login" : "signup";
 }
 
 function getInitialAccountEmail(): string {
@@ -92,11 +97,13 @@ export default function App() {
   const [workspace, setWorkspace] = useState<AccountWorkspace | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);
   const [page, setPage] = useState<WorkspacePage>(() => (
-    typeof window === "undefined" ? "import" : getWorkspacePage(window.location.search)
+    typeof window === "undefined" ? "import" : getWorkspacePage(window.location.pathname)
   ));
+  const [routeRevision, setRouteRevision] = useState(0);
   const [session, setSession] = useState<ImportSession | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [contactPreferences, setContactPreferences] = useState<ContactPreferences>(
     DEFAULT_CONTACT_PREFERENCES,
@@ -125,6 +132,7 @@ export default function App() {
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
+          setErrorTitle(caught instanceof EmailEligibilityError ? caught.title : null);
           setError(caught instanceof Error ? caught.message : "Your account could not be loaded.");
         }
       })
@@ -138,7 +146,8 @@ export default function App() {
 
   useEffect(() => {
     function syncPageFromUrl() {
-      setPage(getWorkspacePage(window.location.search));
+      setPage(getWorkspacePage(window.location.pathname));
+      setRouteRevision((revision) => revision + 1);
     }
 
     window.addEventListener("popstate", syncPageFromUrl);
@@ -146,16 +155,31 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!workspace || getPublicRoute()) return;
+    if (accountLoading || getPublicRoute()) return;
 
-    if (isWorkspacePage(window.location.search)) {
-      setPage(getWorkspacePage(window.location.search));
+    if (!workspace) {
+      if (getApplicationRoute(window.location.pathname) !== "auth") {
+        const requestedPage = isWorkspacePage(window.location.pathname)
+          ? getWorkspacePage(window.location.pathname)
+          : "import";
+        window.history.replaceState(
+          null,
+          "",
+          authPageHref(window.location.pathname, { next: requestedPage }),
+        );
+      }
       return;
     }
 
-    setPage("import");
-    window.history.replaceState(null, "", workspacePageHref("import", window.location.pathname));
-  }, [workspace]);
+    if (isWorkspacePage(window.location.pathname)) {
+      setPage(getWorkspacePage(window.location.pathname));
+      return;
+    }
+
+    const destination = intendedWorkspacePage(window.location.search) ?? "import";
+    setPage(destination);
+    window.history.replaceState(null, "", workspacePageHref(destination, window.location.pathname));
+  }, [accountLoading, routeRevision, workspace]);
 
   useEffect(() => {
     if (!activeOrganizationId) {
@@ -190,11 +214,17 @@ export default function App() {
 
   async function requestAccountAccess(email: string, mode: AccountMode): Promise<boolean> {
     setError(null);
+    setErrorTitle(null);
     try {
-      const result = await requestBrowserAccountAccess(email, mode);
+      const result = await requestBrowserAccountAccess(
+        email,
+        mode,
+        intendedWorkspacePage(window.location.search) ?? "import",
+      );
       if (result.workspace) openWorkspace(result.workspace);
       return result.verificationRequired;
     } catch (caught) {
+      setErrorTitle(caught instanceof EmailEligibilityError ? caught.title : null);
       setError(caught instanceof Error ? caught.message : "The account could not be opened.");
       throw caught;
     }
@@ -202,34 +232,41 @@ export default function App() {
 
   async function verifyAccountOtp(email: string, code: string): Promise<void> {
     setError(null);
+    setErrorTitle(null);
     try {
       openWorkspace(await verifyBrowserAccountOtp(email, code));
     } catch (caught) {
+      setErrorTitle(caught instanceof EmailEligibilityError ? caught.title : null);
       setError(caught instanceof Error ? caught.message : "The account could not be opened.");
       throw caught;
     }
   }
 
   function openWorkspace(nextWorkspace: AccountWorkspace) {
+    const destination = intendedWorkspacePage(window.location.search) ?? "import";
     setWorkspace(nextWorkspace);
     window.history.replaceState(
       null,
       "",
-      workspacePageHref("import", window.location.pathname),
+      workspacePageHref(destination, window.location.pathname),
     );
-    setPage("import");
+    setPage(destination);
   }
 
   function navigateToPage(nextPage: WorkspacePage) {
-    if (nextPage === page && isWorkspacePage(window.location.search)) return;
+    if (nextPage === page && isWorkspacePage(window.location.pathname)) return;
     window.history.pushState(null, "", workspacePageHref(nextPage, window.location.pathname));
     setPage(nextPage);
   }
 
   async function signInWithProvider(provider: BrowserOAuthProvider): Promise<void> {
     setError(null);
+    setErrorTitle(null);
     try {
-      await signInBrowserAccountWithProvider(provider);
+      await signInBrowserAccountWithProvider(
+        provider,
+        intendedWorkspacePage(window.location.search) ?? "import",
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The sign-in provider could not be opened.");
       throw caught;
@@ -239,7 +276,7 @@ export default function App() {
   async function signOut() {
     try {
       await signOutBrowserAccount();
-      window.location.assign("?page=login");
+      window.location.assign(authPageHref(window.location.pathname, { mode: "login" }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "You could not be signed out.");
     }
@@ -310,7 +347,7 @@ export default function App() {
 
   async function deleteAccount() {
     await deleteBrowserAccount();
-    window.location.assign("./");
+    window.location.assign(authPageHref(window.location.pathname));
   }
 
   async function processFile(file: File) {
@@ -458,6 +495,11 @@ export default function App() {
           onVerifyCode={verifyAccountOtp}
           onProviderSignIn={signInWithProvider}
           error={error}
+          errorTitle={errorTitle}
+          loginHref={authPageHref(window.location.pathname, { mode: "login" })}
+          signupHref={authPageHref(window.location.pathname)}
+          termsHref={publicPageHref("terms", window.location.pathname)}
+          privacyHref={publicPageHref("privacy", window.location.pathname)}
         />
       </div>
     );
@@ -616,7 +658,8 @@ export default function App() {
 
       <footer>
         <BuildInfo /> · {hosted ? "Hosted workspace" : "Local development preview"} · lead files never leave this browser ·{" "}
-        <a href="?page=terms">Terms</a> · <a href="?page=privacy">Privacy</a>
+        <a href={publicPageHref("terms", window.location.pathname)}>Terms</a> ·{" "}
+        <a href={publicPageHref("privacy", window.location.pathname)}>Privacy</a>
       </footer>
     </div>
   );

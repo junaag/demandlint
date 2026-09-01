@@ -32,6 +32,22 @@ describe("local account workspace repository", () => {
       .toThrow("No account exists");
   });
 
+  it("creates the Julien Gmail exception once with the required owner workspace", () => {
+    const repository = new LocalAccountWorkspaceRepository(new MemoryStorage());
+    const created = repository.createAccount({ email: " JU.IMBERT@GMAIL.COM " });
+
+    expect(created.organizations).toEqual([
+      expect.objectContaining({ name: "Julien Perso" }),
+    ]);
+    expect(created.session.memberships).toEqual([
+      expect.objectContaining({ role: "owner" }),
+    ]);
+    repository.signOut();
+    const reopened = repository.signIn("ju.imbert@gmail.com");
+    expect(reopened.organizations).toHaveLength(1);
+    expect(reopened.session.memberships).toHaveLength(1);
+  });
+
   it("keeps multiple organizations and allows owners to add members", () => {
     const repository = new LocalAccountWorkspaceRepository(new MemoryStorage());
     const first = repository.createAccount({ email: "alex@company.com" });

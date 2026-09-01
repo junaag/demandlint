@@ -26,9 +26,11 @@ the Supabase dashboard or another secret manager; do not add them to this reposi
 Open **SQL Editor** in the Supabase dashboard, paste the complete contents of
 `migrations/20260820000001_hosted_accounts.sql`, and run it once.
 
-The migration creates the multi-tenant tables, RPC functions and Row Level Security policies. It
-also creates a first organization when a user registers and accepts matching organization invites
-when an invited address registers later.
+The migrations create the multi-tenant tables, RPC functions and Row Level Security policies.
+Beginning with V0.3.13, `complete_authentication()` is the single post-authentication entry point:
+it applies the professional-email policy, accepts matching invitations, and only creates a first
+organization when the user still has no membership. The operation locks the authenticated user row
+and uses conflict-safe inserts so repeated email or OAuth callbacks remain idempotent.
 
 ## 3. Configure passwordless email OTP
 
@@ -54,9 +56,9 @@ this OTP form.
 In **Authentication → URL Configuration**, set:
 
 - Site URL: `https://demandlint.com`
-- Production redirect: `https://demandlint.com/**`
-- Legacy GitHub Pages redirect: `https://junaag.github.io/demandlint/**`
-- Local development redirect: `http://localhost:5173/**`
+- Production callback: `https://demandlint.com/auth`
+- Legacy GitHub Pages callback: `https://junaag.github.io/demandlint/auth`
+- Local development callback: `http://localhost:5173/auth`
 
 The GitHub Pages URL stays temporarily allowed so an in-flight session still works while DNS and
 the custom domain certificate propagate.
@@ -84,6 +86,11 @@ browser session.
 
 Google and Microsoft buttons stay disabled until their OAuth applications and Supabase providers
 are configured. Enable each corresponding GitHub variable only after its full OAuth flow passes.
+
+Both providers must return to `/auth`; the browser then calls `complete_authentication()` before it
+opens any protected route. The Azure client requests the required `email` scope; the Entra app
+should also include the optional `xms_edov` claim so Supabase can reject unverified email domains.
+Provider credentials remain in the Supabase dashboard and must never be added to `VITE_` variables.
 
 ## 7. Configure workspace invitation email
 

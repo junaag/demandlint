@@ -25,6 +25,11 @@ interface DeliveryRow {
   inviter_name: string;
 }
 
+interface EmailEligibilityRow {
+  eligible: boolean;
+  reason: "consumer" | "disposable" | "invalid" | null;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -116,6 +121,19 @@ Deno.serve(async (request: Request) => {
         throw new Error("Enter an email and choose a valid workspace role.");
       }
       email = normalizeEmail(body.email);
+      const { data: eligibilityData, error: eligibilityError } = await userClient.rpc(
+        "evaluate_email_eligibility",
+        { input_email: email },
+      );
+      if (eligibilityError) throw new Error(eligibilityError.message);
+      const eligibility = (eligibilityData as EmailEligibilityRow[] | null)?.[0];
+      if (!eligibility?.eligible) {
+        throw new Error(
+          eligibility?.reason === "disposable"
+            ? "Temporary email addresses are not supported. Please use your work email address."
+            : "DemandLint is available for business accounts only. Please sign in with your work email address.",
+        );
+      }
       const { error } = await userClient.rpc("invite_organization_member", {
         target_organization_id: body.organizationId,
         member_email: email,
@@ -147,8 +165,11 @@ Deno.serve(async (request: Request) => {
     if (!delivery) throw new Error("The invitation could not be prepared.");
 
     const applicationUrl = new URL(Deno.env.get("DEMANDLINT_APP_URL") ?? "https://demandlint.com");
-    applicationUrl.searchParams.set("page", delivery.member_status === "active" ? "login" : "signup");
+    const applicationBasePath = applicationUrl.pathname.replace(/\/$/, "");
+    applicationUrl.pathname = `${applicationBasePath}/auth`;
+    applicationUrl.searchParams.set("mode", delivery.member_status === "active" ? "login" : "signup");
     applicationUrl.searchParams.set("email", delivery.email);
+    applicationUrl.searchParams.set("next", `${applicationBasePath}/settings`);
     const emailContent = invitationEmail(delivery, applicationUrl.toString());
 
     const resendResponse = await fetch("https://api.resend.com/emails", {
