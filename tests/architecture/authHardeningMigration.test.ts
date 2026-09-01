@@ -5,6 +5,10 @@ const migration = readFileSync(
   new URL("../../supabase/migrations/20260831154125_auth_hardening.sql", import.meta.url),
   "utf8",
 ).toLowerCase();
+const eligibilityPrivilegeHotfix = readFileSync(
+  new URL("../../supabase/migrations/20260901075921_auth_eligibility_anon_usage.sql", import.meta.url),
+  "utf8",
+).toLowerCase();
 
 describe("auth hardening migration", () => {
   it("checks eligibility before any application provisioning", () => {
@@ -35,5 +39,11 @@ describe("auth hardening migration", () => {
     expect(migration).toContain("clean_email = 'ju.imbert@gmail.com'");
     expect(migration).toContain("current_email = 'ju.imbert@gmail.com' then 'julien perso'");
     expect(migration).not.toContain("ju.imbert+%");
+  });
+
+  it("allows the pre-authentication eligibility wrapper to resolve its private implementation", () => {
+    expect(migration).toContain("grant execute on function private.email_eligibility(text) to anon, authenticated");
+    expect(eligibilityPrivilegeHotfix).toContain("grant usage on schema private to anon");
+    expect(eligibilityPrivilegeHotfix).not.toContain("grant select");
   });
 });
