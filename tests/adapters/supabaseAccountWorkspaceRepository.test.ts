@@ -160,7 +160,7 @@ describe("SupabaseAccountWorkspaceRepository", () => {
         provider,
         options: {
           redirectTo: "https://demandlint.com/auth?next=%2Ftemplates",
-          ...(provider === "azure" ? { scopes: "email" } : {}),
+          ...(provider === "azure" ? { scopes: "openid email" } : {}),
         },
       });
       expect(rpc).toHaveBeenCalledWith("complete_authentication");
@@ -208,5 +208,21 @@ describe("SupabaseAccountWorkspaceRepository", () => {
     expect(first?.organizations).toEqual(second?.organizations);
     expect(second?.organizations).toHaveLength(1);
     expect(second?.session.memberships).toHaveLength(1);
+  });
+  it("requests the email scope required by Microsoft OAuth", async () => {
+    const signInWithOAuth = vi.fn(async () => ({ error: null }));
+    mocks.getSupabaseClient.mockReturnValue({
+      auth: { signInWithOAuth },
+    });
+
+    await new SupabaseAccountWorkspaceRepository().signInWithProvider("azure", "import");
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: "azure",
+      options: {
+        redirectTo: "https://demandlint.com/auth?next=%2Fimport",
+        scopes: "openid email",
+      },
+    });
   });
 });

@@ -105,7 +105,7 @@ export class SupabaseAccountWorkspaceRepository {
       provider,
       options: {
         redirectTo: publicAuthCallbackUrl(destination),
-        ...(provider === "azure" ? { scopes: "email" } : {}),
+        ...(provider === "azure" ? { scopes: "openid email" } : {}),
       },
     });
     if (error) throw new Error(error.message);
