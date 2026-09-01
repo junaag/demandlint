@@ -1,0 +1,19 @@
+import { GlobalCta, Hero, SectionHeading } from "../shared";
+import { CommonModelVisual } from "../visuals";
+
+const SOLUTIONS = [
+  { eyebrow: "FIELD MARKETING", title: "Turn event files into usable data — faster.", copy: "Event data frequently arrives from different organizers, platforms and scanning providers. DemandLint helps standardize those files before they enter your CRM or marketing systems.", uses: ["Event attendee lists", "Badge scanner exports", "Lead retrieval files", "Tradeshow leads", "Event partner lists"], benefit: "From event spreadsheet to CRM-ready file without rebuilding the process after every event." },
+  { eyebrow: "MARKETING OPERATIONS", title: "Protect the quality of your marketing database.", copy: "Create repeatable rules for campaign imports instead of relying on individual spreadsheet manipulation.", uses: ["Campaign member uploads", "Webinar registrations", "Partner campaigns", "Contact uploads", "Marketing database updates"], benefit: "Apply the same data standards to every incoming campaign." },
+  { eyebrow: "REVENUE OPERATIONS", title: "Improve data quality before it reaches the CRM.", copy: "Revenue Operations teams often inherit inconsistent datasets from multiple teams and external sources. DemandLint provides a controlled preparation step before CRM import.", uses: ["Lead imports", "Account updates", "Contact imports", "Bulk CRM updates", "Territory normalization", "Status normalization"], benefit: "Reduce bad data at the point of entry instead of correcting it downstream." },
+  { eyebrow: "DATA & OPERATIONS TEAMS", title: "Make recurring spreadsheet workflows predictable.", copy: "DemandLint can be used whenever operational teams repeatedly receive files that must conform to a defined schema.", uses: ["Third-party datasets", "Supplier files", "Operational imports", "Master-data updates", "Internal data transfers", "Bulk application imports"], benefit: "Turn undocumented spreadsheet manipulation into a controlled process." },
+  { eyebrow: "AGENCIES & SERVICE PROVIDERS", title: "Deliver consistent data, whatever the source.", copy: "Agencies frequently collect information from different clients, platforms and providers. DemandLint makes it possible to transform those heterogeneous inputs into the format each client expects.", uses: ["Client lead delivery", "Event data processing", "Campaign data", "Third-party lists", "Standardized deliverables"], benefit: "One reusable workflow instead of one spreadsheet process per client." },
+];
+
+export function SolutionsPage() {
+  return <>
+    <Hero eyebrow="SOLUTIONS" title="Data preparation isn't just a marketing problem." copy="Whenever teams receive files from different sources and need to import them into a controlled system, the same problems appear: different structures, inconsistent formats and manual corrections. DemandLint creates a reliable preparation layer between the source file and the destination." />
+    <section className="solutions-list marketing-section" id="use-cases"><div className="marketing-container">{SOLUTIONS.map((solution, index) => <article className="solution-row" key={solution.eyebrow}><div className="solution-number">0{index + 1}</div><div className="solution-copy"><SectionHeading eyebrow={solution.eyebrow} title={solution.title} copy={solution.copy} /><h3>{solution.benefit}</h3></div><div className="use-list"><span>Typical uses</span><ul>{solution.uses.map(use => <li key={use}>{use}</li>)}</ul></div></article>)}</div></section>
+    <section className="marketing-section common-model" id="teams"><div className="marketing-container"><SectionHeading eyebrow="A COMMON MODEL" title="Different teams. Same underlying problem." copy="Whether the destination is a CRM, marketing platform, business application or internal database, the principle remains the same." align="center" /><CommonModelVisual /></div></section>
+    <GlobalCta />
+  </>;
+}
