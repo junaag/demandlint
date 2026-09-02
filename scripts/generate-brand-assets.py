@@ -67,11 +67,21 @@ def icon_image(size: int, opaque: bool = False) -> Image.Image:
 
 def generate_email_lockup() -> None:
     scale = 4
-    image = Image.new("RGBA", (240 * scale, 56 * scale), (0, 0, 0, 0))
+    source_width, output_width, output_height = 252, 240, 56
+    image = Image.new("RGBA", (source_width * scale, output_height * scale), (0, 0, 0, 0))
     draw_icon(image, (0, 4 * scale, 70 * scale, 44 * scale))
     draw = ImageDraw.Draw(image)
     draw.text((78 * scale, 7 * scale), "DemandLint", font=font(29 * scale, bold=True), fill=NAVY)
-    image.resize((240, 56), Image.Resampling.LANCZOS).save(BRAND / "demandlint-logo-email.png", optimize=True)
+
+    # Fit the complete lockup into the original 240x56 asset while preserving its proportions.
+    # The wider source canvas prevents the final "t" from touching or crossing the right edge.
+    fitted_height = round(image.height * output_width / source_width)
+    fitted = image.resize((output_width * scale, fitted_height), Image.Resampling.LANCZOS)
+    output = Image.new("RGBA", (output_width * scale, output_height * scale), (0, 0, 0, 0))
+    output.alpha_composite(fitted, (0, (output.height - fitted.height) // 2))
+    output.resize((output_width, output_height), Image.Resampling.LANCZOS).save(
+        BRAND / "demandlint-logo-email.png", optimize=True
+    )
 
 
 def generate_social_preview() -> None:
