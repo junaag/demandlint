@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DemandLintLogo } from "../components/DemandLintLogo";
 import type { PublicSiteRoute } from "./publicSiteRouting";
 
 export const APP_URL = "https://app.demandlint.com";
@@ -19,7 +20,7 @@ export function MarketingHeader({ route }: { route: PublicSiteRoute }) {
   </div></header>;
 }
 
-export function Brand() { return <a className="marketing-brand" href="/" aria-label="DemandLint home"><span className="marketing-brand-mark" aria-hidden="true">D</span><strong>DemandLint</strong></a>; }
+export function Brand() { return <a className="marketing-brand" href="/" aria-label="DemandLint home"><DemandLintLogo width={41} /><strong>DemandLint</strong></a>; }
 
 export function Hero({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
   return <section className="page-hero"><div className="marketing-container page-hero-inner"><p className="marketing-kicker">{eyebrow}</p><h1>{title}</h1><p>{copy}</p><a className="marketing-button" href={APP_URL}>Open DemandLint <span aria-hidden="true">→</span></a></div></section>;

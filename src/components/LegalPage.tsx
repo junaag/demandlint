@@ -1,6 +1,7 @@
 type LegalPageKind = "terms" | "privacy";
 
 import { publicPageHref } from "../application/workspaceNavigation";
+import { DemandLintLogo } from "./DemandLintLogo";
 
 interface LegalPageProps {
   kind: LegalPageKind;
@@ -16,7 +17,7 @@ export function LegalPage({ kind }: LegalPageProps) {
       <article className="legal-document">
         <header className="legal-header">
           <a className="legal-brand" href="./" aria-label="Back to DemandLint">
-            <span className="auth-brand-mark" aria-hidden="true">D</span>
+            <DemandLintLogo width={44} />
             <strong>DemandLint</strong>
           </a>
           <p className="legal-eyebrow">LEGAL DOCUMENT</p>

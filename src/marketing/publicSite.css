@@ -18,7 +18,8 @@
 .marketing-header { position: sticky; z-index: 20; top: 0; border-bottom: 1px solid rgba(226, 231, 240, .82); background: rgba(255, 255, 255, .9); backdrop-filter: blur(18px); }
 .marketing-header-inner { display: grid; grid-template-columns: auto auto 1fr; align-items: center; min-height: 76px; gap: 32px; }
 .marketing-brand { display: inline-flex; align-items: center; justify-self: start; gap: 10px; color: var(--marketing-ink); text-decoration: none; font-size: 18px; letter-spacing: -.025em; }
-.marketing-brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: linear-gradient(145deg, #6576ff, #4d5fe7); box-shadow: 0 8px 18px rgba(76, 99, 210, .2); color: white; font-size: 15px; font-weight: 850; }
+.marketing-brand .demandlint-logo { width: 41px; }
+.marketing-diagram-logo { width: 45px; }
 .marketing-nav { display: flex; align-items: center; justify-content: center; gap: 34px; }
 .marketing-nav a { color: #59667c; text-decoration: none; font-size: 14px; font-weight: 650; }
 .marketing-nav a:hover, .marketing-nav a.active { color: var(--marketing-ink); }
@@ -186,7 +187,7 @@
 .use-list li { padding: 10px 0; border-bottom: 1px solid #edf0f4; color: #5f6c82; font-size: 13px; }
 .common-model-visual { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 24px; margin-top: 64px; }
 .common-model-visual > div { display: grid; gap: 12px; padding: 28px; border: 1px solid #dfe5ee; border-radius: 16px; background: #fff; }
-.common-model-visual > div > span:not(.marketing-brand-mark) { color: #8b96a7; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.common-model-visual > div > span { color: #8b96a7; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .common-model-visual > div > strong { color: #48566e; font-size: 14px; line-height: 1.55; }
 .common-model-visual > i { color: #9aa5b7; font-style: normal; }
 .common-model-visual .common-model-core { justify-items: center; border-color: #cfd8fb; background: linear-gradient(145deg, #f8f9ff, #eef1ff); text-align: center; }
@@ -231,6 +232,7 @@
 .marketing-footer { padding: 72px 0 25px; background: #111827; color: #c6cedb; text-align: left; }
 .footer-grid { display: grid; grid-template-columns: 2fr repeat(4, 1fr); gap: 45px; }
 .marketing-footer .marketing-brand { color: #fff; }
+.marketing-footer .marketing-brand .demandlint-logo { width: 45px; padding: 3px; border-radius: 6px; background: #fff; }
 .footer-brand p { max-width: 220px; margin: 18px 0 0; color: #8994a7; font-size: 13px; line-height: 1.6; }
 .footer-column { display: grid; align-content: start; gap: 12px; }
 .footer-column strong { margin-bottom: 5px; color: #fff; font-size: 12px; }
@@ -275,7 +277,7 @@
   .marketing-container { width: min(100% - 32px, 1180px); }
   .marketing-header-inner { min-height: 68px; gap: 12px; }
   .marketing-brand strong { font-size: 16px; }
-  .marketing-brand-mark { width: 31px; height: 31px; border-radius: 9px; }
+  .marketing-brand .demandlint-logo { width: 36px; }
   .marketing-button-small { min-height: 38px; padding: 0 12px; font-size: 12px; }
   .marketing-button-small span { display: none; }
   .marketing-hero { padding: 68px 0 72px; }

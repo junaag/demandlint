@@ -72,7 +72,7 @@ function invitationEmail(delivery: DeliveryRow, invitationUrl: string) {
       <tr><td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border:1px solid #e1e6ef;border-radius:18px">
           <tr><td style="padding:34px 38px 12px">
-            <div style="font-size:20px;font-weight:800">DemandLint</div>
+            <img src="https://demandlint.com/brand/demandlint-logo-email.png" width="240" height="56" alt="DemandLint" style="display:block;width:240px;height:56px;border:0" />
           </td></tr>
           <tr><td style="padding:12px 38px 36px">
             <p style="margin:0 0 10px;color:#4c63d2;font-size:12px;font-weight:800;letter-spacing:.08em">WORKSPACE INVITATION</p>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { DemandLintLogo } from "./DemandLintLogo";
 
 export type AccountMode = "signup" | "login";
 type OAuthProvider = "google" | "azure";
@@ -145,7 +146,7 @@ export function AccountGate({
     <main className="auth-page login-page">
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand">
-          <span className="auth-brand-mark" aria-hidden="true">D</span>
+          <DemandLintLogo width={50} />
           <strong>DemandLint</strong>
         </div>
 

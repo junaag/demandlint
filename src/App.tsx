@@ -61,6 +61,7 @@ import { MappingPanel } from "./components/MappingPanel";
 import { MappingTemplatesPanel } from "./components/MappingTemplatesPanel";
 import { UploadPanel } from "./components/UploadPanel";
 import { WorkspaceSettings } from "./components/WorkspaceSettings";
+import { DemandLintLogo } from "./components/DemandLintLogo";
 import { EmailEligibilityError } from "./application/auth/emailEligibility";
 import {
   authPageHref,
@@ -668,7 +669,7 @@ export default function App() {
 function Brand() {
   return (
     <div className="brand-lockup">
-      <div className="brand-mark" aria-hidden="true">D</div>
+      <DemandLintLogo width={41} />
       <div><strong>DemandLint</strong><span>Lead import quality</span></div>
     </div>
   );

@@ -54,6 +54,9 @@ function usePageMetadata(route: PublicSiteRoute) {
     setMeta("property", "og:type", "website");
     setMeta("property", "og:url", `${window.location.origin}${window.location.pathname}`);
     setMeta("property", "og:image", `${window.location.origin}/og.png`);
+    setMeta("name", "twitter:title", metadata.title);
+    setMeta("name", "twitter:description", metadata.description);
+    setMeta("name", "twitter:image", `${window.location.origin}/og.png`);
   }, [route]);
 }
 

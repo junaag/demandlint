@@ -1,3 +1,4 @@
+import { DemandLintLogo } from "../components/DemandLintLogo";
 import { Check, VisualShell } from "./shared";
 
 export function SpreadsheetRows({ headers, rows, clean = false }: { headers: string[]; rows: string[][]; clean?: boolean }) {
@@ -20,7 +21,7 @@ export function ArchitectureVisual() {
   return <div className="architecture-visual" aria-label="Sources flow through DemandLint to destinations">
     <ArchitectureSide label="Sources" items={["Events", "Partners", "Campaigns", "External providers", "Internal teams"]} />
     <span className="architecture-arrow" aria-hidden="true">→</span>
-    <div className="architecture-core"><span className="marketing-brand-mark">D</span><strong>DemandLint</strong><p>Map <i>→</i> Standardize <i>→</i> Validate</p></div>
+    <div className="architecture-core"><DemandLintLogo className="marketing-diagram-logo" width={45} /><strong>DemandLint</strong><p>Map <i>→</i> Standardize <i>→</i> Validate</p></div>
     <span className="architecture-arrow" aria-hidden="true">→</span>
     <ArchitectureSide label="Destinations" items={["CRM", "Business applications", "Databases", "Internal systems"]} />
   </div>;
@@ -46,4 +47,4 @@ export function ExcelModelVisual() { return <VisualShell title="CRM-import-model
 
 export function PreviewExportVisual() { return <VisualShell title="Final preview" meta="250 rows · 8 columns" className="preview-visual"><SpreadsheetRows clean headers={["First Name", "Email", "Country"]} rows={[["Anna Martin", "anna@acme.co", "France"], ["Jon Evans", "jon@north.io", "United States"], ["Mia Chen", "mia@contoso.com", "Singapore"]]} /><div className="export-ready"><span><Check /> All blocking checks resolved</span><button type="button">Export XLSX <span aria-hidden="true">↓</span></button></div></VisualShell>; }
 
-export function CommonModelVisual() { return <div className="common-model-visual"><div><span>Uncontrolled source file</span><strong>Different structures<br />Inconsistent values</strong></div><i>→</i><div className="common-model-core"><span className="marketing-brand-mark">D</span><strong>DemandLint standard</strong><small>Mappings · Rules · Validation</small></div><i>→</i><div><span>Reliable destination dataset</span><strong>Predictable structure<br />Validated values</strong></div></div>; }
+export function CommonModelVisual() { return <div className="common-model-visual"><div><span>Uncontrolled source file</span><strong>Different structures<br />Inconsistent values</strong></div><i>→</i><div className="common-model-core"><DemandLintLogo className="marketing-diagram-logo" width={45} /><strong>DemandLint standard</strong><small>Mappings · Rules · Validation</small></div><i>→</i><div><span>Reliable destination dataset</span><strong>Predictable structure<br />Validated values</strong></div></div>; }

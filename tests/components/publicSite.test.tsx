@@ -15,6 +15,8 @@ describe("public marketing site", () => {
     expect(html).toContain(heading);
     expect(html).toContain(`href="${APP_URL}"`);
     expect(html).toContain("Reliable data preparation before import.");
+    expect(html).toContain('class="demandlint-logo"');
+    expect(html).not.toContain('marketing-brand-mark');
   });
 
   it("keeps the requested global navigation and omits deferred sections", () => {

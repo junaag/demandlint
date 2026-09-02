@@ -42,6 +42,7 @@ Then edit the magic-link/confirmation template in **Authentication → Email Tem
 message shows the numeric token using:
 
 ```html
+<img src="https://demandlint.com/brand/demandlint-logo-email.png" width="240" height="56" alt="DemandLint">
 <p>Your DemandLint verification code is:</p>
 <h2>{{ .Token }}</h2>
 <p>This code can only be used once.</p>

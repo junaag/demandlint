@@ -10,6 +10,7 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select { font: inherit; }
 button, label { -webkit-tap-highlight-color: transparent; }
+.demandlint-logo { display: block; flex: 0 0 auto; height: auto; }
 input {
   width: 100%;
   min-width: 0;
@@ -40,16 +41,7 @@ input:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .12
 .brand-lockup > div:last-child { display: grid; }
 .brand-lockup strong { font-size: 16px; }
 .brand-lockup span { font-size: 12px; color: #6c7689; }
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: #172033;
-  color: white;
-  font-weight: 800;
-}
+.brand-lockup .demandlint-logo { width: 41px; }
 .privacy-pill {
   border: 1px solid #cfe6d7;
   background: #f3fbf6;
@@ -448,18 +440,7 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 .signup-card { width: 100%; }
 .signup-card .auth-heading { margin-top: 0; }
 .auth-brand { display: flex; align-items: center; justify-content: center; gap: 11px; }
-.auth-brand-mark {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: linear-gradient(145deg, #6576ff, #4d5fe7);
-  color: white;
-  font-size: 20px;
-  font-weight: 900;
-  box-shadow: 0 7px 18px rgba(76, 95, 231, .22);
-}
+.auth-brand .demandlint-logo { width: 50px; }
 .auth-brand strong { color: #171b26; font-size: 29px; letter-spacing: -.025em; }
 .auth-heading { margin: 22px 0 30px; text-align: center; }
 .auth-heading h1 { margin: 0; color: #263451; font-size: clamp(28px, 4vw, 34px); letter-spacing: -.035em; }
@@ -549,6 +530,7 @@ select:focus { border-color: #6e80dc; box-shadow: 0 0 0 3px rgba(76, 99, 210, .1
 }
 .legal-header { padding-bottom: 30px; border-bottom: 1px solid #e7eaf0; text-align: center; }
 .legal-brand { display: inline-flex; align-items: center; gap: 10px; color: #171b26; text-decoration: none; }
+.legal-brand .demandlint-logo { width: 44px; }
 .legal-brand strong { font-size: 25px; letter-spacing: -.025em; }
 .legal-eyebrow { margin: 28px 0 8px !important; color: #6676e8 !important; font-size: 11px !important; font-weight: 850; letter-spacing: .12em; }
 .legal-header h1 { margin: 0; color: #263451; font-size: clamp(32px, 5vw, 48px); letter-spacing: -.04em; }
